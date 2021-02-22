@@ -2,13 +2,13 @@ use bevy::prelude::*;
 
 #[derive(Default, Debug)]
 struct Velocity {
-    translation: Vec3,
+    forward: f32,
     rotation: f32,
 }
 
 #[derive(Default, Debug)]
 struct Acceleration {
-    translation: Vec3,
+    forward: f32,
     rotation: f32,
 }
 
@@ -22,10 +22,21 @@ struct Thrust {
 impl Default for Thrust {
     fn default() -> Self {
         Thrust {
-            forward: 100.0,
-            backward: 50.0,
-            yaw: 2.0,
+            forward: 200.0,
+            backward: 150.0,
+            yaw: 5.0,
         }
+    }
+}
+
+fn velocity_system(time: Res<Time>, mut query: Query<(&Velocity, Mut<Transform>)>) {
+    let delta_time = f32::min(0.2, time.delta_seconds());
+    for (velocity, mut transform) in query.iter_mut() {
+        let angle = std::f32::consts::PI / 2.0 + velocity.rotation;
+        let speed = velocity.forward * delta_time;
+        transform.translation.x += angle.cos() * speed;
+        transform.translation.y += angle.sin() * speed;
+        transform.rotation = Quat::from_rotation_z(velocity.rotation);
     }
 }
 
@@ -33,17 +44,8 @@ fn acceleration_system(time: Res<Time>, mut query: Query<(&Acceleration, Mut<Vel
     let delta_seconds = f32::min(0.2, time.delta_seconds());
 
     for (acceleration, mut velocity) in query.iter_mut() {
-        velocity.translation += acceleration.translation * delta_seconds;
+        velocity.forward += acceleration.forward * delta_seconds;
         velocity.rotation += acceleration.rotation * delta_seconds;
-    }
-}
-
-fn velocity_system(time: Res<Time>, mut query: Query<(&Velocity, Mut<Transform>)>) {
-    let delta_seconds = f32::min(0.2, time.delta_seconds());
-    for (velocity, mut transform) in query.iter_mut() {
-        transform.rotate(Quat::from_rotation_z(velocity.rotation * delta_seconds));
-        transform.translation += velocity.translation * delta_seconds;
-        println!("{:?}", transform);
     }
 }
 
@@ -56,7 +58,7 @@ fn thrust_system(keyboard: Res<Input<KeyCode>>, mut query: Query<(&Thrust, Mut<A
     for (thrust, mut acceleration) in query.iter_mut() {
         acceleration.rotation =
             if left { thrust.yaw } else { 0.0 } - if right { thrust.yaw } else { 0.0 };
-        acceleration.translation.y = if forwards { thrust.forward } else { 0.0 }
+        acceleration.forward = if forwards { thrust.forward } else { 0.0 }
             - if backwards { thrust.backward } else { 0.0 };
     }
 }
