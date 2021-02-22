@@ -1,15 +1,22 @@
 use bevy::prelude::*;
 
 #[derive(Default, Debug)]
-struct Velocity(Vec3);
+struct Velocity {
+    translation: Vec3,
+    rotation: f32,
+}
 
 #[derive(Default, Debug)]
-struct Acceleration(Vec3);
+struct Acceleration {
+    translation: Vec3,
+    rotation: f32,
+}
 
 #[derive(Debug)]
 struct Thrust {
     forward: f32,
     backward: f32,
+    yaw: f32,
 }
 
 impl Default for Thrust {
@@ -17,31 +24,39 @@ impl Default for Thrust {
         Thrust {
             forward: 100.0,
             backward: 50.0,
+            yaw: 2.0,
         }
     }
 }
 
-fn acceleration_system(time: Res<Time>, mut query: Query<(&Acceleration, &mut Velocity)>) {
+fn acceleration_system(time: Res<Time>, mut query: Query<(&Acceleration, Mut<Velocity>)>) {
     let delta_seconds = f32::min(0.2, time.delta_seconds());
 
     for (acceleration, mut velocity) in query.iter_mut() {
-        velocity.0 += acceleration.0 * delta_seconds;
+        velocity.translation += acceleration.translation * delta_seconds;
+        velocity.rotation += acceleration.rotation * delta_seconds;
     }
 }
 
-fn velocity_system(time: Res<Time>, mut query: Query<(&Velocity, &mut Transform)>) {
+fn velocity_system(time: Res<Time>, mut query: Query<(&Velocity, Mut<Transform>)>) {
     let delta_seconds = f32::min(0.2, time.delta_seconds());
     for (velocity, mut transform) in query.iter_mut() {
-        transform.translation += velocity.0 * delta_seconds;
-        println!("{:?}", velocity);
+        transform.rotate(Quat::from_rotation_z(velocity.rotation * delta_seconds));
+        transform.translation += velocity.translation * delta_seconds;
+        println!("{:?}", transform);
     }
 }
 
-fn thrust_system(keyboard: Res<Input<KeyCode>>, mut query: Query<(&Thrust, &mut Acceleration)>) {
+fn thrust_system(keyboard: Res<Input<KeyCode>>, mut query: Query<(&Thrust, Mut<Acceleration>)>) {
     let forwards = keyboard.pressed(KeyCode::Up);
     let backwards = keyboard.pressed(KeyCode::Down);
+    let left = keyboard.pressed(KeyCode::Left);
+    let right = keyboard.pressed(KeyCode::Right);
+
     for (thrust, mut acceleration) in query.iter_mut() {
-        acceleration.0.y = if forwards { thrust.forward } else { 0.0 }
+        acceleration.rotation =
+            if left { thrust.yaw } else { 0.0 } - if right { thrust.yaw } else { 0.0 };
+        acceleration.translation.y = if forwards { thrust.forward } else { 0.0 }
             - if backwards { thrust.backward } else { 0.0 };
     }
 }
@@ -70,8 +85,8 @@ impl Plugin for AsteroidPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_resource(ClearColor(Color::rgb(0.1, 0.0, 0.2)))
             .add_startup_system(setup.system())
-            .add_system(velocity_system.system())
             .add_system(acceleration_system.system())
+            .add_system(velocity_system.system())
             .add_system(thrust_system.system());
     }
 }
