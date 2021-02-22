@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 #[derive(Default, Debug)]
 struct Velocity {
-    forward: f32,
+    translation: Vec2,
     rotation: f32,
 }
 
@@ -24,7 +24,7 @@ impl Default for Thrust {
         Thrust {
             forward: 200.0,
             backward: 150.0,
-            yaw: 5.0,
+            yaw: 0.03,
         }
     }
 }
@@ -32,23 +32,27 @@ impl Default for Thrust {
 fn velocity_system(time: Res<Time>, mut query: Query<(&Velocity, Mut<Transform>)>) {
     let delta_time = f32::min(0.2, time.delta_seconds());
     for (velocity, mut transform) in query.iter_mut() {
-        let angle = std::f32::consts::PI / 2.0 + velocity.rotation;
-        let speed = velocity.forward * delta_time;
-        transform.translation.x += angle.cos() * speed;
-        transform.translation.y += angle.sin() * speed;
-        transform.rotation = Quat::from_rotation_z(velocity.rotation);
+        transform.translation.x += velocity.translation.x * delta_time;
+        transform.translation.y += velocity.translation.y * delta_time;
+        //transform.rotation = Quat::from_rotation_z(velocity.rotation);
+        transform.rotate(Quat::from_rotation_z(velocity.rotation));
     }
 }
 
 fn acceleration_system(time: Res<Time>, mut query: Query<(&Acceleration, Mut<Velocity>)>) {
-    let delta_seconds = f32::min(0.2, time.delta_seconds());
+    let delta_time = f32::min(0.2, time.delta_seconds());
 
     for (acceleration, mut velocity) in query.iter_mut() {
-        velocity.forward += acceleration.forward * delta_seconds;
-        velocity.rotation += acceleration.rotation * delta_seconds;
+        velocity.rotation += acceleration.rotation * delta_time;
+        let angle = std::f32::consts::PI / 2.0 + velocity.rotation;
+        velocity.translation += Vec2::new(
+            angle.cos() * acceleration.forward * delta_time,
+            angle.sin() * acceleration.forward * delta_time,
+        );
     }
 }
 
+/// The thrust system adds creates the acceleration
 fn thrust_system(keyboard: Res<Input<KeyCode>>, mut query: Query<(&Thrust, Mut<Acceleration>)>) {
     let forwards = keyboard.pressed(KeyCode::Up);
     let backwards = keyboard.pressed(KeyCode::Down);
