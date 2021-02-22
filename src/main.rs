@@ -7,6 +7,9 @@ struct Velocity {
 }
 
 #[derive(Default, Debug)]
+struct Friction(f32);
+
+#[derive(Default, Debug)]
 struct Acceleration {
     forward: f32,
     rotation: f32,
@@ -21,17 +24,30 @@ struct Thrust {
 impl Default for Thrust {
     fn default() -> Self {
         Thrust {
-            forward: 500.0,
-            yaw: 0.2,
+            forward: 1000.0,
+            yaw: 17.0,
         }
     }
 }
 
-fn velocity_system(time: Res<Time>, mut query: Query<(&Velocity, Mut<Transform>)>) {
+fn floor_velocity_system(mut query: Query<Mut<Velocity>>) {
+    for mut velocity in query.iter_mut() {
+        if velocity.rotation.abs() <= 0.0001 {
+            velocity.rotation = 0.0;
+        }
+
+        if velocity.translation.length_squared() <= 1.0 {
+            velocity.translation.y = 0.0;
+            velocity.translation.x = 0.0;
+        }
+    }
+}
+
+fn velocity_system(time: Res<Time>, mut query: Query<(Mut<Velocity>, Mut<Transform>)>) {
     let delta_time = f32::min(0.2, time.delta_seconds());
 
     for (velocity, mut transform) in query.iter_mut() {
-        transform.rotate(Quat::from_rotation_z(velocity.rotation));
+        transform.rotate(Quat::from_rotation_z(velocity.rotation * delta_time));
         transform.translation.x += velocity.translation.x * delta_time;
         transform.translation.y += velocity.translation.y * delta_time;
     }
@@ -52,6 +68,14 @@ fn acceleration_system(
             angle.cos() * acceleration.forward * delta_time,
             angle.sin() * acceleration.forward * delta_time,
         );
+    }
+}
+
+fn friction_system(time: Res<Time>, mut query: Query<(&Friction, &mut Velocity)>) {
+    let delta_time = f32::min(0.2, time.delta_seconds());
+    for (friction, mut velocity) in query.iter_mut() {
+        velocity.rotation *= 1.0 - bevy::math::clamp(2.0 * friction.0 * delta_time, 0.0, 1.0);
+        velocity.translation *= 1.0 - bevy::math::clamp(friction.0 * delta_time, 0.0, 1.0);
     }
 }
 
@@ -83,7 +107,8 @@ fn setup(
         })
         .with(Velocity::default())
         .with(Acceleration::default())
-        .with(Thrust::default());
+        .with(Thrust::default())
+        .with(Friction(1.0));
 }
 
 struct AsteroidPlugin;
@@ -93,8 +118,10 @@ impl Plugin for AsteroidPlugin {
         app.add_resource(ClearColor(Color::rgb(0.1, 0.0, 0.2)))
             .add_startup_system(setup.system())
             .add_system(acceleration_system.system())
+            .add_system(thrust_system.system())
+            .add_system(floor_velocity_system.system())
             .add_system(velocity_system.system())
-            .add_system(thrust_system.system());
+            .add_system(friction_system.system());
     }
 }
 
