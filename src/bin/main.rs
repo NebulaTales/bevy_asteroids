@@ -1,5 +1,7 @@
 use asteroid::{
-    component::{Acceleration, CollisionMask, Friction, LayerMask, Thrust, Velocity, OBSTACLE},
+    component::{
+        Acceleration, CollisionMask, Friction, PlayerControlled, Thrust, Velocity, OBSTACLE,
+    },
     AsteroidPlugin,
 };
 
@@ -24,20 +26,15 @@ fn setup(
         .spawn(Camera2dBundle::default())
         .spawn(SpriteBundle {
             material: materials.add(ship_handle.clone().into()),
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+            transform: Transform::from_translation(Vec3::new(0.0, -300.0, 0.0)),
             ..Default::default()
         })
-        .with(Velocity::default())
+        .with(Velocity::with_translation(0.0, 100.0))
         .with(Acceleration::default())
         .with(Thrust::default())
+        .with(PlayerControlled)
         .with(Friction(1.0))
-        .with(CollisionMask(OBSTACLE))
-        .spawn(SpriteBundle {
-            material: materials.add(ship_handle.into()),
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-            ..Default::default()
-        })
-        .with(LayerMask(OBSTACLE));
+        .with(CollisionMask(OBSTACLE));
 }
 
 fn main() {

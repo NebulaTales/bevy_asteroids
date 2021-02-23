@@ -1,7 +1,7 @@
 use crate::component::*;
 use bevy::{
     core::Time,
-    ecs::{Entity, Mut, Query, Res},
+    ecs::{Entity, Mut, Query, Res, With},
     input::{keyboard::KeyCode, Input},
     math::{Quat, Vec2},
     sprite::{collide_aabb::collide, Sprite},
@@ -54,16 +54,21 @@ pub fn friction(time: Res<Time>, mut query: Query<(&Friction, &mut Velocity)>) {
     }
 }
 
-/// The thrust system adds creates the acceleration
-pub fn thrust(keyboard: Res<Input<KeyCode>>, mut query: Query<(&Thrust, Mut<Acceleration>)>) {
-    let forwards = keyboard.pressed(KeyCode::Up);
+/// The thrust system adds creates the acceleration using keyboard inputs
+pub fn keyboard_thrust(
+    keyboard: Res<Input<KeyCode>>,
+    mut query: Query<(&Thrust, Mut<Acceleration>), With<PlayerControlled>>,
+) {
+    let up = keyboard.pressed(KeyCode::Up);
+    let down = keyboard.pressed(KeyCode::Down);
     let left = keyboard.pressed(KeyCode::Left);
     let right = keyboard.pressed(KeyCode::Right);
 
     for (thrust, mut acceleration) in query.iter_mut() {
         acceleration.rotation =
             if left { thrust.yaw } else { 0.0 } - if right { thrust.yaw } else { 0.0 };
-        acceleration.forward = if forwards { thrust.forward } else { 0.0 }
+        acceleration.forward =
+            if up { thrust.forward } else { 0.0 } - if down { thrust.backward } else { 0.0 };
     }
 }
 
