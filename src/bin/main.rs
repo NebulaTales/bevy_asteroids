@@ -1,7 +1,5 @@
 use asteroid::{
-    component::{
-        Acceleration, CollisionMask, Friction, PlayerControlled, Thrust, Velocity, OBSTACLE,
-    },
+    component::{Acceleration, CollisionMask, Friction, Thrust, Velocity, OBSTACLE},
     AsteroidPlugin,
 };
 
@@ -10,7 +8,7 @@ use bevy::{
     asset::{AssetServer, Assets},
     ecs::{Commands, IntoSystem, Res, ResMut},
     math::Vec3,
-    render::entity::Camera2dBundle,
+    render::{color::Color, entity::OrthographicCameraBundle, pass::ClearColor},
     sprite::{entity::SpriteBundle, ColorMaterial},
     transform::components::Transform,
     DefaultPlugins,
@@ -23,7 +21,7 @@ fn setup(
 ) {
     let ship_handle = asset_server.load("sprites/ship.png");
     commands
-        .spawn(Camera2dBundle::default())
+        .spawn(OrthographicCameraBundle::new_2d())
         .spawn(SpriteBundle {
             material: materials.add(ship_handle.clone().into()),
             transform: Transform::from_translation(Vec3::new(0.0, -300.0, 0.0)),
@@ -32,13 +30,13 @@ fn setup(
         .with(Velocity::with_translation(0.0, 100.0))
         .with(Acceleration::default())
         .with(Thrust::default())
-        .with(PlayerControlled)
         .with(Friction(1.0))
         .with(CollisionMask(OBSTACLE));
 }
 
 fn main() {
     App::build()
+        .insert_resource(ClearColor(Color::rgb(0.1, 0.0, 0.2)))
         .add_plugins(DefaultPlugins)
         .add_plugin(AsteroidPlugin)
         .add_startup_system(setup.system())

@@ -16,7 +16,7 @@ impl Velocity {
 
     pub fn with_translation(x: f32, y: f32) -> Self {
         Velocity {
-            translation: Vec2 { x, y },
+            translation: Vec2::new(x, y),
             ..Default::default()
         }
     }
