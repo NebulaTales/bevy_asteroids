@@ -16,6 +16,7 @@ impl Plugin for AsteroidPlugin {
             .add_system(system::thrust.system())
             .add_system(system::floor_velocity.system())
             .add_system(system::velocity.system())
+            .add_system(system::collision.system())
             .add_system(system::friction.system());
     }
 }
