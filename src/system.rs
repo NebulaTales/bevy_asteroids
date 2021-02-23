@@ -1,5 +1,11 @@
 use crate::component::*;
-use bevy::prelude::*;
+use bevy::{
+    core::Time,
+    ecs::{Mut, Query, Res},
+    input::{keyboard::KeyCode, Input},
+    math::{Quat, Vec2},
+    transform::components::Transform,
+};
 
 pub fn floor_velocity(mut query: Query<Mut<Velocity>>) {
     for mut velocity in query.iter_mut() {

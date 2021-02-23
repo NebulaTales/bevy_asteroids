@@ -1,4 +1,8 @@
-use bevy::prelude::*;
+use bevy::{
+    app::{AppBuilder, Plugin},
+    ecs::IntoSystem,
+    render::{color::Color, pass::ClearColor},
+};
 
 pub mod component;
 mod system;

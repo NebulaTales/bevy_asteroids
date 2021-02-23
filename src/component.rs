@@ -29,3 +29,7 @@ impl Default for Thrust {
         }
     }
 }
+
+pub struct CanCollide;
+
+pub struct Collider;

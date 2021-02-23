@@ -2,7 +2,17 @@ use asteroid::{
     component::{Acceleration, Friction, Thrust, Velocity},
     AsteroidPlugin,
 };
-use bevy::prelude::*;
+
+use bevy::{
+    app::App,
+    asset::{AssetServer, Assets},
+    ecs::{Commands, IntoSystem, Res, ResMut},
+    math::Vec3,
+    render::entity::Camera2dBundle,
+    sprite::{entity::SpriteBundle, ColorMaterial},
+    transform::components::Transform,
+    DefaultPlugins,
+};
 
 fn setup(
     commands: &mut Commands,
