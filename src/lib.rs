@@ -6,6 +6,8 @@ use bevy::{
 pub mod component;
 mod system;
 
+use component::PlayerControlled;
+
 pub struct AsteroidPlugin;
 
 impl Plugin for AsteroidPlugin {
@@ -15,6 +17,7 @@ impl Plugin for AsteroidPlugin {
             .add_system(system::floor_velocity.system())
             .add_system(system::velocity.system())
             .add_system(system::collision.system())
+            .add_system(system::delayed_add::<PlayerControlled>.system())
             .add_system(system::friction.system());
     }
 }

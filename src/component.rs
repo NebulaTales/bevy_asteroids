@@ -55,9 +55,14 @@ impl Default for Thrust {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct PlayerControlled;
 
 pub struct LayerMask(pub u8);
 pub struct CollisionMask(pub u8);
 pub const PLAYER: u8 = 0b00000001;
 pub const OBSTACLE: u8 = 0b00000010;
+
+pub struct DelayedAdd<T>(pub T, pub Timer)
+where
+    T: Component + Copy;

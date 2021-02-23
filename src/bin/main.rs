@@ -1,11 +1,15 @@
 use asteroid::{
-    component::{Acceleration, CollisionMask, Friction, Thrust, Velocity, OBSTACLE},
+    component::{
+        Acceleration, CollisionMask, DelayedAdd, Friction, PlayerControlled, Thrust, Velocity,
+        OBSTACLE,
+    },
     AsteroidPlugin,
 };
 
 use bevy::{
     app::App,
     asset::{AssetServer, Assets},
+    core::Timer,
     ecs::{Commands, IntoSystem, Res, ResMut},
     math::Vec3,
     render::{color::Color, entity::OrthographicCameraBundle, pass::ClearColor},
@@ -31,6 +35,10 @@ fn setup(
         .with(Acceleration::default())
         .with(Thrust::default())
         .with(Friction(1.0))
+        .with(DelayedAdd(
+            PlayerControlled,
+            Timer::from_seconds(2.0, false),
+        ))
         .with(CollisionMask(OBSTACLE));
 }
 

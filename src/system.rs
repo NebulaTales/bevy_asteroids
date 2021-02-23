@@ -1,7 +1,7 @@
 use crate::component::*;
 use bevy::{
     core::Time,
-    ecs::{Entity, Mut, Query, Res, With},
+    ecs::{Commands, Component, Entity, Mut, Query, Res, With},
     input::{keyboard::KeyCode, Input},
     math::{Quat, Vec2},
     sprite::{collide_aabb::collide, Sprite},
@@ -90,6 +90,20 @@ pub fn collision(
                     println!("{:?}", src_transform);
                 }
             }
+        }
+    }
+}
+
+pub fn delayed_add<T>(
+    time: Res<Time>,
+    commands: &mut Commands,
+    mut query: Query<(Entity, Mut<DelayedAdd<T>>)>,
+) where
+    T: Component + Copy,
+{
+    for (entity, mut add) in query.iter_mut() {
+        if add.1.tick(time.delta_seconds()).just_finished() {
+            commands.remove_one::<T>(entity).insert_one(entity, add.0);
         }
     }
 }
