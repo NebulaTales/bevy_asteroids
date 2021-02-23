@@ -1,7 +1,7 @@
 use crate::component::*;
 use bevy::prelude::*;
 
-pub fn floor_velocity_system(mut query: Query<Mut<Velocity>>) {
+pub fn floor_velocity(mut query: Query<Mut<Velocity>>) {
     for mut velocity in query.iter_mut() {
         if velocity.rotation.abs() <= 0.0001 {
             velocity.rotation = 0.0;
@@ -14,7 +14,7 @@ pub fn floor_velocity_system(mut query: Query<Mut<Velocity>>) {
     }
 }
 
-pub fn velocity_system(time: Res<Time>, mut query: Query<(Mut<Velocity>, Mut<Transform>)>) {
+pub fn velocity(time: Res<Time>, mut query: Query<(Mut<Velocity>, Mut<Transform>)>) {
     let delta_time = f32::min(0.2, time.delta_seconds());
 
     for (velocity, mut transform) in query.iter_mut() {
@@ -24,10 +24,7 @@ pub fn velocity_system(time: Res<Time>, mut query: Query<(Mut<Velocity>, Mut<Tra
     }
 }
 
-pub fn acceleration_system(
-    time: Res<Time>,
-    mut query: Query<(&Acceleration, &Transform, Mut<Velocity>)>,
-) {
+pub fn acceleration(time: Res<Time>, mut query: Query<(&Acceleration, &Transform, Mut<Velocity>)>) {
     let delta_time = f32::min(0.2, time.delta_seconds());
 
     for (acceleration, transform, mut velocity) in query.iter_mut() {
@@ -42,7 +39,7 @@ pub fn acceleration_system(
     }
 }
 
-pub fn friction_system(time: Res<Time>, mut query: Query<(&Friction, &mut Velocity)>) {
+pub fn friction(time: Res<Time>, mut query: Query<(&Friction, &mut Velocity)>) {
     let delta_time = f32::min(0.2, time.delta_seconds());
     for (friction, mut velocity) in query.iter_mut() {
         velocity.rotation *= 1.0 - bevy::math::clamp(2.0 * friction.0 * delta_time, 0.0, 1.0);
@@ -51,10 +48,7 @@ pub fn friction_system(time: Res<Time>, mut query: Query<(&Friction, &mut Veloci
 }
 
 /// The thrust system adds creates the acceleration
-pub fn thrust_system(
-    keyboard: Res<Input<KeyCode>>,
-    mut query: Query<(&Thrust, Mut<Acceleration>)>,
-) {
+pub fn thrust(keyboard: Res<Input<KeyCode>>, mut query: Query<(&Thrust, Mut<Acceleration>)>) {
     let forwards = keyboard.pressed(KeyCode::Up);
     let left = keyboard.pressed(KeyCode::Left);
     let right = keyboard.pressed(KeyCode::Right);
