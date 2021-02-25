@@ -73,10 +73,11 @@ pub fn keyboard_thrust(
 }
 
 pub fn collision(
+    commands: &mut Commands,
     source_query: Query<(Entity, &Sprite, &Transform, &CollisionMask)>,
     target_query: Query<(Entity, &Sprite, &Transform, &LayerMask)>,
 ) {
-    for (_, src_sprite, src_transform, src_mask) in source_query.iter() {
+    for (src, src_sprite, src_transform, src_mask) in source_query.iter() {
         for (_, tgt_sprite, tgt_transform, tgt_mask) in target_query.iter() {
             if collide(
                 src_transform.translation,
@@ -87,7 +88,7 @@ pub fn collision(
             .is_some()
             {
                 if src_mask.0 & tgt_mask.0 > 0u8 {
-                    println!("{:?}", src_transform);
+                    commands.despawn(src);
                 }
             }
         }
