@@ -1,5 +1,6 @@
 use bevy::{
-    ecs::{Commands, Entity, Query},
+    app::{AppBuilder, Plugin},
+    ecs::{Commands, Entity, IntoSystem, Query},
     sprite::{collide_aabb::collide, Sprite},
     transform::components::Transform,
 };
@@ -29,5 +30,12 @@ pub fn layer_check(
                 }
             }
         }
+    }
+}
+
+pub struct CollisionPlugin;
+impl Plugin for CollisionPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_system(layer_check.system());
     }
 }

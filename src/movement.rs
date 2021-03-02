@@ -1,6 +1,7 @@
 use bevy::{
+    app::{AppBuilder, Plugin},
     core::Time,
-    ecs::{Mut, Query, Res},
+    ecs::{IntoSystem, Mut, Query, Res},
     math::{Quat, Vec2},
     transform::components::Transform,
 };
@@ -103,5 +104,16 @@ pub fn friction(time: Res<Time>, mut query: Query<(&Friction, &mut Velocity)>) {
     for (friction, mut velocity) in query.iter_mut() {
         velocity.rotation *= 1.0 - bevy::math::clamp(2.0 * friction.0 * delta_time, 0.0, 1.0);
         velocity.translation *= 1.0 - bevy::math::clamp(friction.0 * delta_time, 0.0, 1.0);
+    }
+}
+
+pub struct MovementPlugin;
+
+impl Plugin for MovementPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_system(acceleration.system())
+            .add_system(floor_velocity.system())
+            .add_system(velocity.system())
+            .add_system(friction.system());
     }
 }

@@ -1,6 +1,10 @@
-use crate::movement::{Acceleration, Thrust};
+use crate::{
+    movement::{Acceleration, Thrust},
+    utils,
+};
 use bevy::{
-    ecs::{Mut, Query, Res, With},
+    app::{AppBuilder, Plugin},
+    ecs::{IntoSystem, Mut, Query, Res, With},
     input::{keyboard::KeyCode, Input},
 };
 
@@ -22,5 +26,13 @@ pub fn keyboard(
             if left { thrust.yaw } else { 0.0 } - if right { thrust.yaw } else { 0.0 };
         acceleration.forward =
             if up { thrust.forward } else { 0.0 } - if down { thrust.backward } else { 0.0 };
+    }
+}
+
+pub struct ControlsPlugin;
+impl Plugin for ControlsPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_system(keyboard.system())
+            .add_system(utils::delayed_add::<PlayerControlled>.system());
     }
 }

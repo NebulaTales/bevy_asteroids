@@ -4,9 +4,10 @@ use crate::{
 };
 
 use bevy::{
+    app::{AppBuilder, Plugin},
     asset::{AssetServer, Assets},
     core::Timer,
-    ecs::{Commands, Res, ResMut},
+    ecs::{Commands, IntoSystem, Res, ResMut},
     math::{Vec2, Vec3},
     render::{color::Color, entity::OrthographicCameraBundle},
     sprite::{entity::SpriteBundle, ColorMaterial, Sprite},
@@ -98,4 +99,15 @@ pub fn player(
 
 pub fn game(commands: &mut Commands) {
     commands.spawn(OrthographicCameraBundle::new_2d());
+}
+
+pub struct StartupPlugin;
+
+impl Plugin for StartupPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_startup_system(player.system())
+            .add_startup_system(asteroids.system())
+            .add_startup_system(game.system())
+            .add_startup_system(environment.system());
+    }
 }
