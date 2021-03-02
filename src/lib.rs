@@ -1,23 +1,61 @@
 use bevy::{
-    app::{AppBuilder, Plugin},
+    app::{AppBuilder, Plugin, PluginGroup, PluginGroupBuilder},
     ecs::IntoSystem,
 };
 
-pub mod component;
-mod system;
+mod collision;
+mod controls;
+mod movement;
+mod startup;
+mod utils;
 
-use component::PlayerControlled;
+pub use collision::{CollisionMask, LayerMask, OBSTACLE, PLAYER};
+pub use controls::PlayerControlled;
+pub use movement::{Acceleration, Friction, Thrust, Velocity};
+pub use utils::DelayedAdd;
 
-pub struct AsteroidPlugin;
+pub struct AsteroidPlugins;
+pub struct StartupPlugin;
+pub struct CollisionPlugin;
+pub struct MovementPlugin;
+pub struct ControlsPlugin;
 
-impl Plugin for AsteroidPlugin {
+impl PluginGroup for AsteroidPlugins {
+    fn build(&mut self, group: &mut PluginGroupBuilder) {
+        group.add(StartupPlugin);
+        group.add(CollisionPlugin);
+        group.add(MovementPlugin);
+        group.add(ControlsPlugin);
+    }
+}
+
+impl Plugin for StartupPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(system::acceleration.system())
-            .add_system(system::keyboard_thrust.system())
-            .add_system(system::floor_velocity.system())
-            .add_system(system::velocity.system())
-            .add_system(system::collision.system())
-            .add_system(system::delayed_add::<PlayerControlled>.system())
-            .add_system(system::friction.system());
+        app.add_startup_system(startup::player.system())
+            .add_startup_system(startup::asteroids.system())
+            .add_startup_system(startup::game.system())
+            .add_startup_system(startup::environment.system());
+    }
+}
+
+impl Plugin for CollisionPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_system(collision::layer_check.system());
+    }
+}
+
+impl Plugin for MovementPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_system(movement::acceleration.system())
+            .add_system(movement::floor_velocity.system())
+            .add_system(movement::velocity.system())
+            .add_system(movement::friction.system());
+    }
+}
+
+impl Plugin for ControlsPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_system(controls::keyboard.system())
+            .add_system(utils::delayed_add::<controls::PlayerControlled>.system());
     }
 }
