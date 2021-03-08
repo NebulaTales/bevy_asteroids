@@ -1,7 +1,7 @@
 use bevy::{
     app::{AppBuilder, Plugin},
     core::Time,
-    ecs::{IntoSystem, Mut, Query, Res},
+    ecs::system::{IntoSystem, Query, Res},
     math::{Quat, Vec2},
     transform::components::Transform,
 };
@@ -61,7 +61,7 @@ impl Default for Thrust {
     }
 }
 
-pub fn floor_velocity(mut query: Query<Mut<Velocity>>) {
+pub fn floor_velocity(mut query: Query<&mut Velocity>) {
     for mut velocity in query.iter_mut() {
         if velocity.rotation.abs() <= 0.0001 {
             velocity.rotation = 0.0;
@@ -74,7 +74,7 @@ pub fn floor_velocity(mut query: Query<Mut<Velocity>>) {
     }
 }
 
-pub fn velocity(time: Res<Time>, mut query: Query<(Mut<Velocity>, Mut<Transform>)>) {
+pub fn velocity(time: Res<Time>, mut query: Query<(&mut Velocity, &mut Transform)>) {
     let delta_time = f32::min(0.2, time.delta_seconds());
 
     for (velocity, mut transform) in query.iter_mut() {
@@ -84,7 +84,7 @@ pub fn velocity(time: Res<Time>, mut query: Query<(Mut<Velocity>, Mut<Transform>
     }
 }
 
-pub fn acceleration(time: Res<Time>, mut query: Query<(&Acceleration, &Transform, Mut<Velocity>)>) {
+pub fn acceleration(time: Res<Time>, mut query: Query<(&Acceleration, &Transform, &mut Velocity)>) {
     let delta_time = f32::min(0.2, time.delta_seconds());
 
     for (acceleration, transform, mut velocity) in query.iter_mut() {

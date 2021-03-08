@@ -4,7 +4,10 @@ use crate::{
 };
 use bevy::{
     app::{AppBuilder, Plugin},
-    ecs::{IntoSystem, Mut, Query, Res, With},
+    ecs::{
+        query::With,
+        system::{IntoSystem, Query, Res},
+    },
     input::{keyboard::KeyCode, Input},
 };
 
@@ -14,7 +17,7 @@ pub struct PlayerControlled;
 /// The thrust system adds creates the acceleration using keyboard inputs
 pub fn keyboard(
     keyboard: Res<Input<KeyCode>>,
-    mut query: Query<(&Thrust, Mut<Acceleration>), With<PlayerControlled>>,
+    mut query: Query<(&Thrust, &mut Acceleration), With<PlayerControlled>>,
 ) {
     let up = keyboard.pressed(KeyCode::Up);
     let down = keyboard.pressed(KeyCode::Down);
