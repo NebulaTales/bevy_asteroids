@@ -9,7 +9,7 @@ mod startup;
 mod utils;
 mod wrap;
 
-pub use collision::{CollisionMask, CollisionPlugin, LayerMask, OBSTACLE, PLAYER};
+pub use collision::{CollisionMask, CollisionPlugin, LayerMask, AMMO, OBSTACLE, PLAYER};
 pub use controls::{ControlsPlugin, PlayerControlled};
 pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};

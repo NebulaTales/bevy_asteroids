@@ -19,6 +19,7 @@ pub struct CollisionMask(pub u8);
 
 pub const PLAYER: u8 = 0b00000001;
 pub const OBSTACLE: u8 = 0b00000010;
+pub const AMMO: u8 = 0b00000100;
 
 //pub fn collide(a_pos: Vec3, a_size: Vec2, b_pos: Vec3, b_size: Vec2) -> Option<Collision> {
 pub fn square_in_screen(screen: &OrthographicProjection, position: Vec3, size: Vec2) -> bool {

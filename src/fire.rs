@@ -1,4 +1,4 @@
-use crate::{Velocity, Wrap};
+use crate::{CollisionMask, LayerMask, Velocity, Wrap, AMMO, OBSTACLE};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::Assets,
@@ -38,7 +38,9 @@ fn spawn_single(
             ..Default::default()
         })
         .with(Velocity::new(velocity, 0.0))
-        .with(Wrap::from_count(2));
+        .with(Wrap::from_count(2))
+        .with(LayerMask(AMMO))
+        .with(CollisionMask(OBSTACLE));
 }
 
 const INITIAL_SPEED: f32 = 400.0;
