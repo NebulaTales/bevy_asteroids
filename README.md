@@ -1,4 +1,4 @@
-# Bevy Asteroid
+# Bevy Asteroids
 
 An [Asteroids](https://en.wikipedia.org/wiki/Asteroids_(video_game)) clone game made with Rust and [Bevy](https://bevyengine.org/).
 
