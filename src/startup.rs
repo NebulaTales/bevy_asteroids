@@ -1,6 +1,6 @@
 use crate::{
-    Acceleration, CollisionMask, DelayedAdd, Friction, LayerMask, PlayerControlled, Thrust,
-    Velocity, Wrap, WrapCamera, OBSTACLE, PLAYER,
+    Acceleration, CollisionMask, DelayedAdd, FireAngleError, Friction, LayerMask, PlayerControlled,
+    Thrust, Velocity, Wrap, WrapCamera, OBSTACLE, PLAYER,
 };
 
 use bevy::{
@@ -37,6 +37,7 @@ pub fn player(
         ))
         .with(CollisionMask(OBSTACLE))
         .with(Wrap::default())
+        .with(FireAngleError(0.05))
         .with(LayerMask(PLAYER));
 }
 

@@ -249,16 +249,14 @@ fn teleport_wrapped(
 
 fn auto_unwrap(mut commands: Commands, time: Res<Time>, mut query: Query<(Entity, &mut Wrap)>) {
     for (entity, mut wrap) in query.iter_mut() {
-        if let Some(0) = wrap.remaining {
-            println!("{:?} Dye dye dye!!!", entity);
-            commands.remove::<Wrap>(entity);
-        }
-
-        if let Some(timer) = &mut wrap.timer {
-            if timer.tick(time.delta()).just_finished() {
-                println!("{:?} Dye dye dye!!!", entity);
-                commands.remove::<Wrap>(entity);
+        if matches!(wrap.remaining, Some(0))
+            || if let Some(timer) = &mut wrap.timer {
+                timer.tick(time.delta()).just_finished()
+            } else {
+                false
             }
+        {
+            commands.remove::<Wrap>(entity);
         }
     }
 }

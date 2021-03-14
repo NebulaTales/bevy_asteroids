@@ -1,6 +1,6 @@
 use crate::{
     movement::{Acceleration, Thrust},
-    utils, FireSpawner, Wrap,
+    utils, Firing, Wrap,
 };
 use bevy::{
     app::{AppBuilder, Plugin},
@@ -41,13 +41,13 @@ pub fn fire(
 ) {
     if keyboard.just_pressed(KeyCode::Space) {
         for entity in query.iter_mut() {
-            commands.insert(entity, FireSpawner::default());
+            commands.insert(entity, Firing::default());
         }
     }
 
     if keyboard.just_released(KeyCode::Space) {
         for entity in query.iter_mut() {
-            commands.remove::<FireSpawner>(entity);
+            commands.remove::<Firing>(entity);
         }
     }
 }

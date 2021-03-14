@@ -85,8 +85,8 @@ fn key_spawner(
     asset_server: Res<AssetServer>,
     materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    if keyboard.pressed(KeyCode::S) {
-        spawn_asteroids(250, commands, asset_server, materials);
+    if keyboard.just_pressed(KeyCode::S) {
+        spawn_asteroids(1, commands, asset_server, materials);
     }
 }
 

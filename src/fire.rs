@@ -12,13 +12,15 @@ use bevy::{
 };
 use std::time::Duration;
 
-pub struct FireSpawner {
+pub struct Firing {
     time_span: Option<Timer>,
 }
 
-impl Default for FireSpawner {
+pub struct FireAngleError(pub f32);
+
+impl Default for Firing {
     fn default() -> Self {
-        FireSpawner { time_span: None }
+        Firing { time_span: None }
     }
 }
 
@@ -41,18 +43,27 @@ fn spawn_single(
 
 const INITIAL_SPEED: f32 = 400.0;
 const FLOOR_SPEED: f32 = 200.0;
+const PEW_PEW_SPEED: u64 = 250;
 
 pub fn spawn_fire(
     mut commands: Commands,
     time: Res<Time>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut query: Query<(&mut FireSpawner, Option<&Transform>, Option<&Velocity>)>,
+    mut query: Query<(
+        &mut Firing,
+        Option<&Transform>,
+        Option<&Velocity>,
+        Option<&FireAngleError>,
+    )>,
 ) {
-    for (mut spawner, spawner_transform, spawner_velocity) in query.iter_mut() {
+    use rand::prelude::*;
+    let mut rng = thread_rng();
+
+    for (mut spawner, spawner_transform, spawner_velocity, angle_error) in query.iter_mut() {
         let fire = if let Some(time_span) = &mut spawner.time_span {
             time_span.tick(time.delta()).just_finished()
         } else {
-            spawner.time_span = Some(Timer::new(Duration::from_millis(250_u64), true));
+            spawner.time_span = Some(Timer::new(Duration::from_millis(PEW_PEW_SPEED), true));
             true
         };
 
@@ -65,7 +76,12 @@ pub fn spawn_fire(
 
             // Calculate initial velocity by computing vector*INITIAL_SPEED
             let rotation = transform.rotation.to_axis_angle();
-            let angle = std::f32::consts::PI / 2.0 + rotation.0.z * rotation.1;
+            let mut angle = std::f32::consts::PI / 2.0 + rotation.0.z * rotation.1;
+
+            if let Some(error) = angle_error {
+                let error = std::f32::consts::PI * error.0;
+                angle += rng.gen_range(-error..error);
+            }
 
             let mut velocity = Vec2::new(angle.cos() * INITIAL_SPEED, angle.sin() * INITIAL_SPEED);
             if let Some(&spawner_velocity) = spawner_velocity {
