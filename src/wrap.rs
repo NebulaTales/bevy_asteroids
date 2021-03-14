@@ -2,17 +2,19 @@ use crate::{CollisionMask, LayerMask};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::Handle,
+    core::{Time, Timer},
     ecs::{
         entity::Entity,
-        query::With,
+        query::{With, Without},
         schedule::{ParallelSystemDescriptorCoercion, SystemLabel},
-        system::{Commands, IntoSystem, Query},
+        system::{Commands, IntoSystem, Query, Res},
     },
     math::{Quat, Vec2, Vec3},
     render::camera::OrthographicProjection,
     sprite::{entity::SpriteBundle, ColorMaterial, Sprite},
     transform::components::Transform,
 };
+use std::time::Duration;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
 enum Label {
@@ -21,8 +23,41 @@ enum Label {
     Shift,
 }
 
-pub struct Wrap;
-pub struct Wrapped;
+pub struct WrapCamera;
+
+pub struct Wrap {
+    remaining: Option<u8>,
+    timer: Option<Timer>,
+}
+
+impl Default for Wrap {
+    fn default() -> Self {
+        Wrap {
+            remaining: None,
+            timer: None,
+        }
+    }
+}
+
+impl Wrap {
+    pub fn from_count(remaining: u8) -> Self {
+        Wrap {
+            remaining: Some(remaining),
+            timer: None,
+        }
+    }
+
+    pub fn from_duration(duration: Duration) -> Self {
+        Wrap {
+            remaining: None,
+            timer: Some(Timer::new(duration, false)),
+        }
+    }
+}
+
+pub struct Wrapped {
+    pub ghosts: [Option<Entity>; 3],
+}
 
 #[derive(Clone, Copy)]
 enum GDir {
@@ -49,9 +84,14 @@ impl Ghost {
     }
 }
 
+/// Ghost creation function
+/// This system looks for any valid entity with the `Wrap` tag and no `Wrapped` tag yet.
+/// For each, it'll create 3 ghosts (tagged `Ghost`) that will position correctly using
+/// `set_ghosts_shift` system.
+/// The original entity also received the `Wrapped` tag.
 pub fn spawn_ghosts(
     mut commands: Commands,
-    q_projection: Query<&OrthographicProjection>,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     query: Query<
         (
             Entity,
@@ -61,7 +101,7 @@ pub fn spawn_ghosts(
             Option<&CollisionMask>,
             Option<&LayerMask>,
         ),
-        With<Wrap>,
+        (With<Wrap>, Without<Wrapped>),
     >,
 ) {
     for projection in q_projection.iter() {
@@ -78,6 +118,9 @@ pub fn spawn_ghosts(
                 && sprite_max.y < screen_max.y;
 
             if sprite_in_screen {
+                // TODO Should do better
+                let mut entities = Vec::new();
+
                 for direction in &[GDir::WestEast, GDir::NorthSouth, GDir::Diagonal] {
                     commands
                         .spawn(SpriteBundle {
@@ -92,17 +135,25 @@ pub fn spawn_ghosts(
                     if let Some(layer_mask) = layer_mask {
                         commands.with(layer_mask.clone());
                     }
+                    entities.push(commands.current_entity());
                 }
 
-                commands.remove::<Wrap>(entity).insert(entity, Wrapped);
+                commands.insert(
+                    entity,
+                    Wrapped {
+                        ghosts: [entities[0], entities[1], entities[2]],
+                    },
+                );
             }
         }
     }
 }
 
-fn despawn_ghosts(
+/// Automatic despawner for any ghost whose target (originating entity) does
+/// not exist anymore.
+fn despawn_ghosts_indirect(
     mut commands: Commands,
-    q_targets: Query<Entity>,
+    q_targets: Query<Entity, With<Wrapped>>,
     q_ghosts: Query<(Entity, &Ghost)>,
 ) {
     for (entity, ghost) in q_ghosts.iter() {
@@ -112,35 +163,111 @@ fn despawn_ghosts(
     }
 }
 
-fn teleport_wrapped(
-    q_projection: Query<&OrthographicProjection>,
-    mut query: Query<&mut Transform, With<Wrapped>>,
+/// Direct despawner.
+/// For any `Wrapped` entity whose `Wrap` tag has been removed, all ghosts
+/// are removed, so is the `Wrapped` tag.
+/// The `Wrap` tag must be removed manually to trigger this event.
+fn despawn_ghosts_direct(mut commands: Commands, query: Query<(Entity, &Wrapped), Without<Wrap>>) {
+    for (entity, wrapped) in query.iter() {
+        for ghost in wrapped.ghosts.iter() {
+            if let Some(ghost) = ghost {
+                commands.despawn(*ghost);
+            }
+        }
+        commands.remove::<Wrapped>(entity);
+    }
+}
+
+/// Despawner for any main entity (None of `Ghost`, `Wrap` or `Wrapped`
+/// When the sprite goes out of screen.
+/// To see how an entity can lost its `Wrapped` tag, see `despawn_ghost`direct`
+fn despawn_unwrapped(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    mut query: Query<
+        (Entity, &Sprite, &mut Transform),
+        (Without<Wrap>, Without<Wrapped>, Without<Ghost>),
+    >,
 ) {
     for projection in q_projection.iter() {
-        let h_warp = projection.right - projection.left;
-        let v_warp = projection.top - projection.bottom;
-
-        for mut transform in query.iter_mut() {
+        for (entity, sprite, mut transform) in query.iter_mut() {
             let position = &mut transform.translation;
-            if position.x > projection.right {
-                position.x -= h_warp;
+            if position.x - sprite.size.x > projection.right {
+                commands.despawn(entity);
             }
-            if position.x < projection.left {
-                position.x += h_warp;
+            if position.x + sprite.size.x < projection.left {
+                commands.despawn(entity);
             }
-            if position.y > projection.top {
-                position.y -= v_warp;
+            if position.y - sprite.size.y > projection.top {
+                commands.despawn(entity);
             }
-            if position.y < projection.bottom {
-                position.y += v_warp;
+            if position.y + sprite.size.y < projection.bottom {
+                commands.despawn(entity);
             }
         }
     }
 }
 
-// For each Ghost, fetch the transform of its model and save its shift
+/// Teleporter for any non-`Ghost`, `Wrapped` entity.
+/// It'll warp the entity to the other side of the screen as soon as it touches it.
+fn teleport_wrapped(
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    mut query: Query<(&mut Transform, Option<&mut Wrap>), (Without<Ghost>, With<Wrapped>)>,
+) {
+    for projection in q_projection.iter() {
+        let h_warp = projection.right - projection.left;
+        let v_warp = projection.top - projection.bottom;
+
+        for (mut transform, wrap) in query.iter_mut() {
+            let position = &mut transform.translation;
+            let mut dec_count = 0_u8;
+            if position.x > projection.right {
+                position.x -= h_warp;
+                dec_count += 1;
+            }
+            if position.x < projection.left {
+                position.x += h_warp;
+                dec_count += 1;
+            }
+            if position.y > projection.top {
+                position.y -= v_warp;
+                dec_count += 1;
+            }
+            if position.y < projection.bottom {
+                position.y += v_warp;
+                dec_count += 1;
+            }
+
+            if let Some(mut wrap) = wrap {
+                if let Some(c) = wrap.remaining {
+                    wrap.remaining = Some(if c <= dec_count { 0 } else { c - dec_count });
+                }
+            }
+        }
+    }
+}
+
+fn auto_unwrap(mut commands: Commands, time: Res<Time>, mut query: Query<(Entity, &mut Wrap)>) {
+    for (entity, mut wrap) in query.iter_mut() {
+        if let Some(0) = wrap.remaining {
+            println!("{:?} Dye dye dye!!!", entity);
+            commands.remove::<Wrap>(entity);
+        }
+
+        if let Some(timer) = &mut wrap.timer {
+            if timer.tick(time.delta()).just_finished() {
+                println!("{:?} Dye dye dye!!!", entity);
+                commands.remove::<Wrap>(entity);
+            }
+        }
+    }
+}
+
+/// Recalculate the position of all ghosts according to their target.
+/// It does not directly changes the transform, but configures a shift+rotation
+/// information that is then used by `move_ghosts`
 fn set_ghosts_shift(
-    q_projection: Query<&OrthographicProjection>,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     q_targets: Query<(Entity, &Transform)>,
     mut q_ghosts: Query<&mut Ghost>,
 ) {
@@ -180,6 +307,7 @@ fn set_ghosts_shift(
     }
 }
 
+/// Replace the ghosts according to their calculated transformation
 fn move_ghosts(mut query: Query<(&mut Transform, &Ghost)>) {
     for (mut transform, ghost) in query.iter_mut() {
         transform.translation = ghost.shift;
@@ -205,6 +333,9 @@ impl Plugin for WrapPlugin {
                     .after(Label::Spawn),
             )
             .add_system(move_ghosts.system().after(Label::Shift))
-            .add_system(despawn_ghosts.system());
+            .add_system(despawn_ghosts_indirect.system())
+            .add_system(despawn_ghosts_direct.system())
+            .add_system(auto_unwrap.system())
+            .add_system(despawn_unwrapped.system());
     }
 }

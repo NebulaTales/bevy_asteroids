@@ -1,6 +1,6 @@
 use crate::{
     Acceleration, CollisionMask, DelayedAdd, Friction, LayerMask, PlayerControlled, Thrust,
-    Velocity, Wrap, OBSTACLE, PLAYER,
+    Velocity, Wrap, WrapCamera, OBSTACLE, PLAYER,
 };
 
 use bevy::{
@@ -36,12 +36,14 @@ pub fn player(
             Timer::from_seconds(2.0, false),
         ))
         .with(CollisionMask(OBSTACLE))
-        .with(Wrap)
+        .with(Wrap::default())
         .with(LayerMask(PLAYER));
 }
 
 pub fn game(mut commands: Commands) {
-    commands.spawn(OrthographicCameraBundle::new_2d());
+    commands
+        .spawn(OrthographicCameraBundle::new_2d())
+        .with(WrapCamera);
 }
 
 pub struct StartupPlugin;

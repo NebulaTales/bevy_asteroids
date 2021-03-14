@@ -6,7 +6,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Velocity {
     pub translation: Vec2,
     pub rotation: f32,

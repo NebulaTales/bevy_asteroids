@@ -1,12 +1,13 @@
 use crate::{
     movement::{Acceleration, Thrust},
-    utils,
+    utils, FireSpawner, Wrap,
 };
 use bevy::{
     app::{AppBuilder, Plugin},
     ecs::{
+        entity::Entity,
         query::With,
-        system::{IntoSystem, Query, Res},
+        system::{Commands, IntoSystem, Query, Res},
     },
     input::{keyboard::KeyCode, Input},
 };
@@ -15,7 +16,7 @@ use bevy::{
 pub struct PlayerControlled;
 
 /// The thrust system adds creates the acceleration using keyboard inputs
-pub fn keyboard(
+pub fn thrust(
     keyboard: Res<Input<KeyCode>>,
     mut query: Query<(&Thrust, &mut Acceleration), With<PlayerControlled>>,
 ) {
@@ -32,10 +33,49 @@ pub fn keyboard(
     }
 }
 
+/// The thrust system adds creates the acceleration using keyboard inputs
+pub fn fire(
+    mut commands: Commands,
+    keyboard: Res<Input<KeyCode>>,
+    mut query: Query<Entity, With<PlayerControlled>>,
+) {
+    if keyboard.just_pressed(KeyCode::Space) {
+        for entity in query.iter_mut() {
+            commands.insert(entity, FireSpawner::default());
+        }
+    }
+
+    if keyboard.just_released(KeyCode::Space) {
+        for entity in query.iter_mut() {
+            commands.remove::<FireSpawner>(entity);
+        }
+    }
+}
+
+pub fn debug(
+    mut commands: Commands,
+    keyboard: Res<Input<KeyCode>>,
+    query: Query<Entity, With<Wrap>>,
+) {
+    let kill = keyboard.just_pressed(KeyCode::K);
+    let unwrap = keyboard.just_pressed(KeyCode::U);
+
+    for entity in query.iter() {
+        if kill {
+            commands.despawn(entity);
+        }
+        if unwrap {
+            commands.remove::<Wrap>(entity);
+        }
+    }
+}
+
 pub struct ControlsPlugin;
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(keyboard.system())
+        app.add_system(thrust.system())
+            .add_system(fire.system())
+            .add_system(debug.system())
             .add_system(utils::delayed_add::<PlayerControlled>.system());
     }
 }

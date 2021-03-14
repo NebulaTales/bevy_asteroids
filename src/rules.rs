@@ -6,13 +6,14 @@ use bevy::{
     asset::{AssetServer, Assets},
     core::{Time, Timer},
     ecs::system::{Commands, IntoSystem, Res, ResMut},
+    input::{keyboard::KeyCode, Input},
     math::{Vec2, Vec3},
     sprite::{entity::SpriteBundle, ColorMaterial},
     transform::components::Transform,
 };
 
 pub fn spawn_asteroids(
-    number: u8,
+    number: u16,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -39,7 +40,7 @@ pub fn spawn_asteroids(
         let speed = rng.gen_range(50_f32..150_f32);
         let direction = (direction_position - spawn_position).normalize() * speed;
 
-        let r = rng.gen_range(-10.0_f32..10.0_f32);
+        let r = rng.gen_range(-5.0_f32..5.0_f32);
 
         commands
             .spawn(SpriteBundle {
@@ -47,14 +48,14 @@ pub fn spawn_asteroids(
                 transform: Transform::from_translation(Vec3::new(
                     spawn_position.x,
                     spawn_position.y,
-                    0.0,
+                    10.0,
                 )),
                 ..Default::default()
             })
             .with(Velocity::new(Vec2::new(direction.x, direction.y), r))
-            .with(LayerMask(OBSTACLE))
-            .with(Wrap)
-            .with(CollisionMask(PLAYER));
+            //            .with(LayerMask(OBSTACLE))
+            //.with(CollisionMask(PLAYER))
+            .with(Wrap::default());
     }
 }
 
@@ -74,8 +75,18 @@ fn spawner(
     materials: ResMut<Assets<ColorMaterial>>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
-        println!("SPAWN !");
-        spawn_asteroids(5, commands, asset_server, materials);
+        spawn_asteroids(0, commands, asset_server, materials);
+    }
+}
+
+fn key_spawner(
+    commands: Commands,
+    keyboard: Res<Input<KeyCode>>,
+    asset_server: Res<AssetServer>,
+    materials: ResMut<Assets<ColorMaterial>>,
+) {
+    if keyboard.pressed(KeyCode::S) {
+        spawn_asteroids(250, commands, asset_server, materials);
     }
 }
 
@@ -84,6 +95,7 @@ pub struct RulesPlugin;
 impl Plugin for RulesPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.init_resource::<SpawnTimer>()
-            .add_system(spawner.system());
+            .add_system(spawner.system())
+            .add_system(key_spawner.system());
     }
 }
