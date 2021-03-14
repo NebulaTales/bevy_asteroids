@@ -102,8 +102,8 @@ pub fn acceleration(time: Res<Time>, mut query: Query<(&Acceleration, &Transform
 pub fn friction(time: Res<Time>, mut query: Query<(&Friction, &mut Velocity)>) {
     let delta_time = f32::min(0.2, time.delta_seconds());
     for (friction, mut velocity) in query.iter_mut() {
-        velocity.rotation *= 1.0 - bevy::math::clamp(2.0 * friction.0 * delta_time, 0.0, 1.0);
-        velocity.translation *= 1.0 - bevy::math::clamp(friction.0 * delta_time, 0.0, 1.0);
+        velocity.rotation *= 1.0 - (2.0 * friction.0 * delta_time).clamp(0.0, 1.0);
+        velocity.translation *= 1.0 - (friction.0 * delta_time).clamp(0.0, 1.0);
     }
 }
 

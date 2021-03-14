@@ -17,4 +17,4 @@ cargo run --release
 
 - _Arrow keys_ to move the ship
 - _Space bar_ to fire
-
+- Asteroids are spawned explicitely using the _S key_.
