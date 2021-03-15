@@ -167,14 +167,33 @@ fn despawn_ghosts_indirect(
 /// For any `Wrapped` entity whose `Wrap` tag has been removed, all ghosts
 /// are removed, so is the `Wrapped` tag.
 /// The `Wrap` tag must be removed manually to trigger this event.
-fn despawn_ghosts_direct(mut commands: Commands, query: Query<(Entity, &Wrapped), Without<Wrap>>) {
-    for (entity, wrapped) in query.iter() {
-        for ghost in wrapped.ghosts.iter() {
-            if let Some(ghost) = ghost {
-                commands.despawn(*ghost);
+/// This is only done is no the ghost is not visible: if the main entity is in the screen
+fn despawn_ghosts_direct(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    query: Query<(Entity, &Wrapped, &Transform, &Sprite), Without<Wrap>>,
+) {
+    for projection in q_projection.iter() {
+        let screen_min = Vec2::new(projection.left, projection.bottom);
+        let screen_max = Vec2::new(projection.right, projection.top);
+
+        for (entity, wrapped, transform, sprite) in query.iter() {
+            let sprite_min = transform.translation.truncate() - sprite.size / 2.0;
+            let sprite_max = transform.translation.truncate() + sprite.size / 2.0;
+            let sprite_in_screen = sprite_min.x > screen_min.x
+                && sprite_min.y > screen_min.y
+                && sprite_max.x < screen_max.x
+                && sprite_max.y < screen_max.y;
+
+            if sprite_in_screen {
+                for ghost in wrapped.ghosts.iter() {
+                    if let Some(ghost) = ghost {
+                        commands.despawn(*ghost);
+                    }
+                }
+                commands.remove::<Wrapped>(entity);
             }
         }
-        commands.remove::<Wrapped>(entity);
     }
 }
 
