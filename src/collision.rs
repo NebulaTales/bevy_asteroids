@@ -58,19 +58,16 @@ fn check(
     }
 }
 
-/// Collision detection system between two entities
-/// The system determines a collision between a source and a target
-/// The source must have a CollisionMask, which lists all layers it collides with
-/// The target must have a LayerMask, which lists the layers it corresponds to
-/// Entitie must also have a Transform component, which is used to get the actual
-/// positions
+// TODO Ghost management should be in wrapping plugin
 fn transform_based_check(
     mut commands: Commands,
-    q_sources: Query<(Entity, &Collider2D, &LayerMask, &Transform)>,
-    q_targets: Query<(Entity, &Collider2D, &CollisionMask, &Transform)>,
+    q_sources: Query<(Entity, &Collider2D, &LayerMask, &Transform, Option<&Ghost>)>,
+    q_targets: Query<(&Collider2D, &CollisionMask, &Transform)>,
 ) {
-    for (_source, source_collider, source_layer_mask, source_transform) in q_sources.iter() {
-        for (target, target_collider, target_collision_mask, target_transform) in q_targets.iter() {
+    for (source, source_collider, source_layer_mask, source_transform, source_ghost) in
+        q_sources.iter()
+    {
+        for (target_collider, target_collision_mask, target_transform) in q_targets.iter() {
             if source_layer_mask.0 & target_collision_mask.0 > 0u8 {
                 if check(
                     source_collider,
@@ -78,7 +75,12 @@ fn transform_based_check(
                     target_collider,
                     target_transform.translation.into(),
                 ) {
-                    commands.despawn(target);
+                    let entity = if let Some(ghost) = source_ghost {
+                        ghost.target
+                    } else {
+                        source
+                    };
+                    commands.despawn(entity);
                 }
             }
         }
