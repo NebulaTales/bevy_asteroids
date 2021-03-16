@@ -1,4 +1,6 @@
-use crate::{CollisionMask, LayerMask, Velocity, Wrap, AMMO, OBSTACLE, PLAYER};
+use crate::{
+    Collider2D, CollisionMask, LayerMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE, PLAYER,
+};
 use std::time::Duration;
 
 use bevy::{
@@ -53,6 +55,10 @@ pub fn spawn_asteroids(
                 ..Default::default()
             })
             .with(Velocity::new(Vec2::new(direction.x, direction.y), r))
+            .with(Collider2D {
+                shape: Shape2D::Circle(16.0),
+                ..Default::default()
+            })
             .with(LayerMask(OBSTACLE))
             .with(CollisionMask(PLAYER | AMMO))
             .with(Wrap::default());

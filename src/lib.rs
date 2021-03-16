@@ -9,7 +9,7 @@ mod startup;
 mod utils;
 mod wrap;
 
-pub use collision::{CollisionMask, CollisionPlugin, LayerMask, AMMO, OBSTACLE, PLAYER};
+pub use collision::{Collider2D, CollisionMask, CollisionPlugin, LayerMask, Shape2D};
 pub use controls::{ControlsPlugin, PlayerControlled};
 pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
@@ -19,6 +19,10 @@ pub use utils::DelayedAdd;
 pub use wrap::{Ghost, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
 pub struct AsteroidPlugins;
+
+pub const PLAYER: u8 = 0b00000001;
+pub const OBSTACLE: u8 = 0b00000010;
+pub const AMMO: u8 = 0b00000100;
 
 impl PluginGroup for AsteroidPlugins {
     fn build(&mut self, group: &mut PluginGroupBuilder) {

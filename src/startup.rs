@@ -1,6 +1,6 @@
 use crate::{
-    Acceleration, CollisionMask, DelayedAdd, FireAngleError, Friction, LayerMask, PlayerControlled,
-    Thrust, Velocity, Wrap, WrapCamera, OBSTACLE, PLAYER,
+    Acceleration, Collider2D, CollisionMask, DelayedAdd, FireAngleError, Friction, LayerMask,
+    PlayerControlled, Shape2D, Thrust, Velocity, Wrap, WrapCamera, OBSTACLE, PLAYER,
 };
 
 use bevy::{
@@ -35,10 +35,14 @@ pub fn player(
             PlayerControlled,
             Timer::from_seconds(2.0, false),
         ))
+        .with(Collider2D {
+            shape: Shape2D::Circle(32.0),
+            ..Default::default()
+        })
+        .with(LayerMask(PLAYER))
         .with(CollisionMask(OBSTACLE))
         .with(Wrap::default())
-        .with(FireAngleError(0.05))
-        .with(LayerMask(PLAYER));
+        .with(FireAngleError(0.05));
 }
 
 pub fn game(mut commands: Commands) {

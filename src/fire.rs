@@ -1,4 +1,4 @@
-use crate::{CollisionMask, LayerMask, Velocity, Wrap, AMMO, OBSTACLE};
+use crate::{Collider2D, CollisionMask, LayerMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::Assets,
@@ -39,6 +39,10 @@ fn spawn_single(
         })
         .with(Velocity::new(velocity, 0.0))
         .with(Wrap::from_count(2))
+        .with(Collider2D {
+            shape: Shape2D::Circle(10.0),
+            ..Default::default()
+        })
         .with(LayerMask(AMMO))
         .with(CollisionMask(OBSTACLE));
 }
