@@ -10,18 +10,45 @@ use bevy::{
     ecs::system::{Commands, IntoSystem, Res, ResMut},
     input::{keyboard::KeyCode, Input},
     math::{Vec2, Vec3},
-    sprite::{entity::SpriteBundle, ColorMaterial},
+    sprite::{entity::SpriteSheetBundle, TextureAtlas},
     transform::components::Transform,
 };
 
-pub fn spawn_asteroids(
+fn spawn_single(
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    texture_atlases: &mut Assets<TextureAtlas>,
+    position: Vec2,
+    velocity: Vec2,
+    spin: f32,
+) {
+    let texture_handle = asset_server.load("sprites/asteroids.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 1, 4);
+    let texture_atlas = texture_atlases.add(texture_atlas);
+
+    commands
+        .spawn(SpriteSheetBundle {
+            texture_atlas,
+            transform: Transform::from_translation(Vec3::new(position.x, position.y, 10.0)),
+            ..Default::default()
+        })
+        .with(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
+        .with(Collider2D {
+            shape: Shape2D::Circle(32.0),
+            ..Default::default()
+        })
+        .with(LayerMask(OBSTACLE))
+        .with(CollisionMask(PLAYER | AMMO))
+        .with(Wrap::default());
+}
+
+pub fn spawn(
     number: u16,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     use rand::prelude::*;
-    let texture_handle = asset_server.load("sprites/asteroids.png");
     let mut rng = thread_rng();
 
     let spawn_radius = Vec2::new(600.0, 600.0);
@@ -44,24 +71,14 @@ pub fn spawn_asteroids(
 
         let r = rng.gen_range(-5.0_f32..5.0_f32);
 
-        commands
-            .spawn(SpriteBundle {
-                material: materials.add(texture_handle.clone().into()),
-                transform: Transform::from_translation(Vec3::new(
-                    spawn_position.x,
-                    spawn_position.y,
-                    10.0,
-                )),
-                ..Default::default()
-            })
-            .with(Velocity::new(Vec2::new(direction.x, direction.y), r))
-            .with(Collider2D {
-                shape: Shape2D::Circle(32.0),
-                ..Default::default()
-            })
-            .with(LayerMask(OBSTACLE))
-            .with(CollisionMask(PLAYER | AMMO))
-            .with(Wrap::default());
+        spawn_single(
+            &mut commands,
+            &asset_server,
+            &mut texture_atlases,
+            spawn_position,
+            direction,
+            r,
+        );
     }
 }
 
@@ -78,10 +95,10 @@ fn spawner(
     mut timer: ResMut<SpawnTimer>,
     time: Res<Time>,
     asset_server: Res<AssetServer>,
-    materials: ResMut<Assets<ColorMaterial>>,
+    texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
-        spawn_asteroids(0, commands, asset_server, materials);
+        spawn(0, commands, asset_server, texture_atlases);
     }
 }
 
@@ -89,10 +106,10 @@ fn key_spawner(
     commands: Commands,
     keyboard: Res<Input<KeyCode>>,
     asset_server: Res<AssetServer>,
-    materials: ResMut<Assets<ColorMaterial>>,
+    texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     if keyboard.just_pressed(KeyCode::S) {
-        spawn_asteroids(1, commands, asset_server, materials);
+        spawn(1, commands, asset_server, texture_atlases);
     }
 }
 
