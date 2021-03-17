@@ -56,7 +56,7 @@ pub fn spawn_asteroids(
             })
             .with(Velocity::new(Vec2::new(direction.x, direction.y), r))
             .with(Collider2D {
-                shape: Shape2D::Circle(16.0),
+                shape: Shape2D::Circle(32.0),
                 ..Default::default()
             })
             .with(LayerMask(OBSTACLE))

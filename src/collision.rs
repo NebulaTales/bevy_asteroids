@@ -5,9 +5,7 @@ use bevy::{
         entity::Entity,
         system::{Commands, IntoSystem, Query},
     },
-    math::{Vec2, Vec3},
-    render::camera::OrthographicProjection,
-    sprite::{collide_aabb::collide, Sprite},
+    math::Vec2,
     transform::components::Transform,
 };
 
@@ -54,7 +52,19 @@ fn check(
             (collider_a.position + position_a).distance_squared(collider_b.position + position_b)
                 < (radius_a + radius_b).powf(2.0)
         }
-        _ => false,
+        (Shape2D::Rectangle(extends_a), Shape2D::Circle(radius_b)) => {
+            let distance = (position_b + collider_b.position) - (position_a + collider_a.position);
+            let clamped = Vec2::new(
+                distance.x.clamp(-extends_a.x, extends_a.x),
+                distance.y.clamp(-extends_a.y, extends_a.y),
+            );
+            let closest = position_a + clamped;
+
+            closest.distance_squared(position_b) < *radius_b
+        }
+        (Shape2D::Circle(_), Shape2D::Rectangle(_)) => {
+            check(collider_b, position_b, collider_a, position_a)
+        }
     }
 }
 
