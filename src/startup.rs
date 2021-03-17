@@ -42,7 +42,7 @@ pub fn player(
         .with(LayerMask(PLAYER))
         .with(CollisionMask(OBSTACLE))
         .with(Wrap::default())
-        .with(FireAngleError(0.05));
+        .with(FireAngleError(0.03));
 }
 
 pub fn game(mut commands: Commands) {

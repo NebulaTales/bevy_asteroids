@@ -53,14 +53,14 @@ fn check(
                 < (radius_a + radius_b).powf(2.0)
         }
         (Shape2D::Rectangle(extends_a), Shape2D::Circle(radius_b)) => {
-            let distance = (position_b + collider_b.position) - (position_a + collider_a.position);
-            let clamped = Vec2::new(
-                distance.x.clamp(-extends_a.x, extends_a.x),
-                distance.y.clamp(-extends_a.y, extends_a.y),
-            );
-            let closest = position_a + clamped;
-
-            closest.distance_squared(position_b) < *radius_b
+            let square_center = position_a - collider_a.position;
+            let circle_center = position_b + collider_b.position;
+            circle_center.distance_squared(
+                Vec2::new(
+                    (circle_center.x - square_center.x).clamp(-extends_a.x, extends_a.x),
+                    (circle_center.y - square_center.y).clamp(-extends_a.y, extends_a.y),
+                ) + square_center,
+            ) < radius_b.powf(2.0)
         }
         (Shape2D::Circle(_), Shape2D::Rectangle(_)) => {
             check(collider_b, position_b, collider_a, position_a)
