@@ -1,12 +1,10 @@
 use crate::{
     Collider2D, CollisionMask, LayerMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE, PLAYER,
 };
-use std::time::Duration;
 
 use bevy::{
     app::{AppBuilder, Plugin},
-    asset::{AssetServer, Assets},
-    core::{Time, Timer},
+    asset::{AssetServer, Assets, Handle},
     ecs::system::{Commands, IntoSystem, Res, ResMut},
     input::{keyboard::KeyCode, Input},
     math::{Vec2, Vec3},
@@ -16,19 +14,14 @@ use bevy::{
 
 fn spawn_single(
     commands: &mut Commands,
-    asset_server: &AssetServer,
-    texture_atlases: &mut Assets<TextureAtlas>,
+    spawn_info: &SpawnerInfo,
     position: Vec2,
     velocity: Vec2,
     spin: f32,
 ) {
-    let texture_handle = asset_server.load("sprites/asteroids.png");
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 1, 4);
-    let texture_atlas = texture_atlases.add(texture_atlas);
-
     commands
         .spawn(SpriteSheetBundle {
-            texture_atlas,
+            texture_atlas: spawn_info.texture.clone(),
             transform: Transform::from_translation(Vec3::new(position.x, position.y, 10.0)),
             ..Default::default()
         })
@@ -42,12 +35,7 @@ fn spawn_single(
         .with(Wrap::default());
 }
 
-pub fn spawn(
-    number: u16,
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
+fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {
     use rand::prelude::*;
     let mut rng = thread_rng();
 
@@ -71,54 +59,38 @@ pub fn spawn(
 
         let r = rng.gen_range(-5.0_f32..5.0_f32);
 
-        spawn_single(
-            &mut commands,
-            &asset_server,
-            &mut texture_atlases,
-            spawn_position,
-            direction,
-            r,
-        );
+        spawn_single(&mut commands, &spawn_info, spawn_position, direction, r);
     }
 }
 
-struct SpawnTimer(Timer);
-
-impl Default for SpawnTimer {
-    fn default() -> Self {
-        SpawnTimer(Timer::new(Duration::from_secs(3), false))
-    }
-}
-
-fn spawner(
-    commands: Commands,
-    mut timer: ResMut<SpawnTimer>,
-    time: Res<Time>,
-    asset_server: Res<AssetServer>,
-    texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        spawn(0, commands, asset_server, texture_atlases);
-    }
-}
-
-fn key_spawner(
-    commands: Commands,
-    keyboard: Res<Input<KeyCode>>,
-    asset_server: Res<AssetServer>,
-    texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
+fn key_spawner(commands: Commands, keyboard: Res<Input<KeyCode>>, spawn_info: Res<SpawnerInfo>) {
     if keyboard.just_pressed(KeyCode::S) {
-        spawn(1, commands, asset_server, texture_atlases);
+        spawn(1, commands, &spawn_info);
     }
 }
 
 pub struct RulesPlugin;
 
+struct SpawnerInfo {
+    pub texture: Handle<TextureAtlas>,
+}
+
+fn startup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+) {
+    let texture_handle = asset_server.load("sprites/asteroids.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 1, 4);
+
+    commands.insert_resource(SpawnerInfo {
+        texture: texture_atlases.add(texture_atlas),
+    });
+}
+
 impl Plugin for RulesPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.init_resource::<SpawnTimer>()
-            .add_system(spawner.system())
+        app.add_startup_system(startup.system())
             .add_system(key_spawner.system());
     }
 }
