@@ -1,7 +1,7 @@
 use crate::{CollisionMask, LayerMask};
 use bevy::{
     app::{AppBuilder, Plugin},
-    asset::Handle,
+    asset::{Assets, Handle},
     core::{Time, Timer},
     ecs::{
         entity::Entity,
@@ -11,7 +11,10 @@ use bevy::{
     },
     math::{Quat, Vec2, Vec3},
     render::camera::OrthographicProjection,
-    sprite::{entity::SpriteBundle, ColorMaterial, Sprite},
+    sprite::{
+        entity::{SpriteBundle, SpriteSheetBundle},
+        ColorMaterial, Sprite, TextureAtlas, TextureAtlasSprite,
+    },
     transform::components::Transform,
 };
 use std::time::Duration;
@@ -89,7 +92,7 @@ impl Ghost {
 /// For each, it'll create 3 ghosts (tagged `Ghost`) that will position correctly using
 /// `set_ghosts_shift` system.
 /// The original entity also received the `Wrapped` tag.
-pub fn spawn_ghosts(
+pub fn spawn_ghosts_sprite(
     mut commands: Commands,
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     query: Query<
@@ -147,6 +150,76 @@ pub fn spawn_ghosts(
     }
 }
 
+pub fn spawn_ghosts_sprite_atlas(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    query: Query<
+        (
+            Entity,
+            &Handle<TextureAtlas>,
+            &Transform,
+            &TextureAtlasSprite,
+            Option<&CollisionMask>,
+            Option<&LayerMask>,
+        ),
+        (With<Wrap>, Without<Wrapped>),
+    >,
+) {
+    for projection in q_projection.iter() {
+        let screen_min = Vec2::new(projection.left, projection.bottom);
+        let screen_max = Vec2::new(projection.right, projection.top);
+
+        for (entity, texture_atlas, transform, sprite, collision_mask, layer_mask) in query.iter() {
+            let (sprite_min, sprite_max) =
+                if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
+                    (
+                        transform.translation.truncate() - texture_atlas.size / 2.0,
+                        transform.translation.truncate() + texture_atlas.size / 2.0,
+                    )
+                } else {
+                    (Default::default(), Default::default())
+                };
+
+            let sprite_in_screen = sprite_min.x > screen_min.x
+                && sprite_min.y > screen_min.y
+                && sprite_max.x < screen_max.x
+                && sprite_max.y < screen_max.y;
+
+            if sprite_in_screen {
+                // TODO Should do better
+                let mut entities = Vec::new();
+
+                for direction in &[GDir::WestEast, GDir::NorthSouth, GDir::Diagonal] {
+                    let mut entity_commands = commands.spawn_bundle(SpriteSheetBundle {
+                        texture_atlas: texture_atlas.clone(),
+                        transform: transform.clone(),
+                        sprite: TextureAtlasSprite {
+                            index: sprite.index,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    });
+
+                    entity_commands.insert(Ghost::new(entity, *direction));
+
+                    if let Some(collision_mask) = collision_mask {
+                        entity_commands.insert(collision_mask.clone());
+                    }
+                    if let Some(layer_mask) = layer_mask {
+                        entity_commands.insert(layer_mask.clone());
+                    }
+                    entities.push(Some(entity_commands.id()));
+                }
+
+                commands.entity(entity).insert(Wrapped {
+                    ghosts: [entities[0], entities[1], entities[2]],
+                });
+            }
+        }
+    }
+}
+
 /// Automatic despawner for any ghost whose target (originating entity) does
 /// not exist anymore.
 fn despawn_ghosts_indirect(
@@ -165,8 +238,8 @@ fn despawn_ghosts_indirect(
 /// For any `Wrapped` entity whose `Wrap` tag has been removed, all ghosts
 /// are removed, so is the `Wrapped` tag.
 /// The `Wrap` tag must be removed manually to trigger this event.
-/// This is only done is no the ghost is not visible: if the main entity is in the screen
-fn despawn_ghosts_direct(
+/// This is only done if the ghost is not visible: if the main entity is in the screen
+fn despawn_ghosts_direct_sprite(
     mut commands: Commands,
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     query: Query<(Entity, &Wrapped, &Transform, &Sprite), Without<Wrap>>,
@@ -195,10 +268,47 @@ fn despawn_ghosts_direct(
     }
 }
 
+fn despawn_ghosts_direct_sprite_atlas(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    query: Query<(Entity, &Wrapped, &Transform, &Handle<TextureAtlas>), Without<Wrap>>,
+) {
+    for projection in q_projection.iter() {
+        let screen_min = Vec2::new(projection.left, projection.bottom);
+        let screen_max = Vec2::new(projection.right, projection.top);
+
+        for (entity, wrapped, transform, texture_atlas) in query.iter() {
+            let (sprite_min, sprite_max) =
+                if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
+                    (
+                        transform.translation.truncate() - texture_atlas.size / 2.0,
+                        transform.translation.truncate() + texture_atlas.size / 2.0,
+                    )
+                } else {
+                    (Default::default(), Default::default())
+                };
+
+            let sprite_in_screen = sprite_min.x > screen_min.x
+                && sprite_min.y > screen_min.y
+                && sprite_max.x < screen_max.x
+                && sprite_max.y < screen_max.y;
+
+            if sprite_in_screen {
+                for ghost in wrapped.ghosts.iter() {
+                    if let Some(ghost) = ghost {
+                        commands.entity(*ghost).despawn();
+                    }
+                }
+                commands.entity(entity).remove::<Wrapped>();
+            }
+        }
+    }
+}
 /// Despawner for any main entity (None of `Ghost`, `Wrap` or `Wrapped`
 /// When the sprite goes out of screen.
 /// To see how an entity can lost its `Wrapped` tag, see `despawn_ghost`direct`
-fn despawn_unwrapped(
+fn despawn_unwrapped_sprite(
     mut commands: Commands,
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     mut query: Query<
@@ -213,6 +323,35 @@ fn despawn_unwrapped(
             let out_of_left = position.x + sprite.size.x < projection.left;
             let out_of_top = position.y - sprite.size.y > projection.top;
             let out_of_bottom = position.y + sprite.size.y < projection.bottom;
+
+            if out_of_right || out_of_left || out_of_top || out_of_bottom {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
+}
+
+fn despawn_unwrapped_sprite_atlas(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut query: Query<
+        (Entity, &Handle<TextureAtlas>, &mut Transform),
+        (Without<Wrap>, Without<Wrapped>, Without<Ghost>),
+    >,
+) {
+    for projection in q_projection.iter() {
+        for (entity, texture_atlas, mut transform) in query.iter_mut() {
+            let size = if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
+                texture_atlas.size
+            } else {
+                Default::default()
+            };
+            let position = &mut transform.translation;
+            let out_of_right = position.x - size.x > projection.right;
+            let out_of_left = position.x + size.x < projection.left;
+            let out_of_top = position.y - size.y > projection.top;
+            let out_of_bottom = position.y + size.y < projection.bottom;
 
             if out_of_right || out_of_left || out_of_top || out_of_bottom {
                 commands.entity(entity).despawn();
@@ -332,7 +471,13 @@ impl Plugin for WrapPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system(teleport_wrapped.system().label(Label::Teleport))
             .add_system(
-                spawn_ghosts
+                spawn_ghosts_sprite
+                    .system()
+                    .label(Label::Spawn)
+                    .after(Label::Teleport),
+            )
+            .add_system(
+                spawn_ghosts_sprite_atlas
                     .system()
                     .label(Label::Spawn)
                     .after(Label::Teleport),
@@ -345,8 +490,10 @@ impl Plugin for WrapPlugin {
             )
             .add_system(move_ghosts.system().after(Label::Shift))
             .add_system(despawn_ghosts_indirect.system())
-            .add_system(despawn_ghosts_direct.system())
+            .add_system(despawn_ghosts_direct_sprite.system())
+            .add_system(despawn_ghosts_direct_sprite_atlas.system())
             .add_system(auto_unwrap.system())
-            .add_system(despawn_unwrapped.system());
+            .add_system(despawn_unwrapped_sprite.system())
+            .add_system(despawn_unwrapped_sprite_atlas.system());
     }
 }
