@@ -1,6 +1,7 @@
 use crate::{
     Collider2D, CollisionMask, LayerMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE, PLAYER,
 };
+use rand::prelude::*;
 
 use bevy::{
     app::{AppBuilder, Plugin},
@@ -8,7 +9,7 @@ use bevy::{
     ecs::system::{Commands, IntoSystem, Res, ResMut},
     input::{keyboard::KeyCode, Input},
     math::{Vec2, Vec3},
-    sprite::{entity::SpriteSheetBundle, TextureAtlas},
+    sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
     transform::components::Transform,
 };
 
@@ -19,10 +20,15 @@ fn spawn_single(
     velocity: Vec2,
     spin: f32,
 ) {
+    let mut rng = thread_rng();
     commands
         .spawn_bundle(SpriteSheetBundle {
             texture_atlas: spawn_info.texture.clone(),
             transform: Transform::from_translation(Vec3::new(position.x, position.y, 10.0)),
+            sprite: TextureAtlasSprite {
+                index: rng.gen_range(0..4),
+                ..Default::default()
+            },
             ..Default::default()
         })
         .insert(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
@@ -36,7 +42,6 @@ fn spawn_single(
 }
 
 fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {
-    use rand::prelude::*;
     let mut rng = thread_rng();
 
     let spawn_radius = Vec2::new(600.0, 600.0);
