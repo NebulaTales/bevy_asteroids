@@ -20,7 +20,7 @@ pub fn delayed_add<T>(
 {
     for (entity, mut add) in query.iter_mut() {
         if add.1.tick(time.delta()).just_finished() {
-            commands.remove::<T>(entity).insert(entity, add.0);
+            commands.entity(entity).remove::<T>().insert(add.0);
         }
     }
 }

@@ -20,19 +20,19 @@ fn spawn_single(
     spin: f32,
 ) {
     commands
-        .spawn(SpriteSheetBundle {
+        .spawn_bundle(SpriteSheetBundle {
             texture_atlas: spawn_info.texture.clone(),
             transform: Transform::from_translation(Vec3::new(position.x, position.y, 10.0)),
             ..Default::default()
         })
-        .with(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
-        .with(Collider2D {
+        .insert(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
+        .insert(Collider2D {
             shape: Shape2D::Circle(32.0),
             ..Default::default()
         })
-        .with(LayerMask(OBSTACLE))
-        .with(CollisionMask(PLAYER | AMMO))
-        .with(Wrap::default());
+        .insert(LayerMask(OBSTACLE))
+        .insert(CollisionMask(PLAYER | AMMO))
+        .insert(Wrap::default());
 }
 
 fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {

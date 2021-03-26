@@ -32,20 +32,20 @@ fn spawn_single(
 ) {
     let size = Vec2::new(3.0, 3.0);
     commands
-        .spawn(SpriteBundle {
+        .spawn_bundle(SpriteBundle {
             material: materials.add(Color::rgb(1.0, 0.5, 0.5).into()),
             transform: Transform::from_translation(position),
             sprite: Sprite::new(size),
             ..Default::default()
         })
-        .with(Velocity::new(velocity, 0.0))
-        .with(Wrap::from_count(2))
-        .with(Collider2D {
+        .insert(Velocity::new(velocity, 0.0))
+        .insert(Wrap::from_count(2))
+        .insert(Collider2D {
             shape: Shape2D::Rectangle(size),
             ..Default::default()
         })
-        .with(LayerMask(AMMO))
-        .with(CollisionMask(OBSTACLE));
+        .insert(LayerMask(AMMO))
+        .insert(CollisionMask(OBSTACLE));
 }
 
 const INITIAL_SPEED: f32 = 400.0;

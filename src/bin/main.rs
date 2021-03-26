@@ -36,7 +36,7 @@ struct EntityCounter;
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         // 2d camera
-        .spawn(Text2dBundle {
+        .spawn_bundle(Text2dBundle {
             text: Text::with_section(
                 "N/A",
                 TextStyle {
@@ -52,7 +52,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             transform: Transform::from_translation(Vec3::new(0.0, 280.0, 100.0)),
             ..Default::default()
         })
-        .with(EntityCounter);
+        .insert(EntityCounter);
 }
 
 fn update_entity_count(mut world: &mut World) {

@@ -122,28 +122,26 @@ pub fn spawn_ghosts(
                 let mut entities = Vec::new();
 
                 for direction in &[GDir::WestEast, GDir::NorthSouth, GDir::Diagonal] {
-                    commands
-                        .spawn(SpriteBundle {
-                            material: material.clone(),
-                            transform: transform.clone(),
-                            ..Default::default()
-                        })
-                        .with(Ghost::new(entity, *direction));
+                    let mut entity_commands = commands.spawn_bundle(SpriteBundle {
+                        material: material.clone(),
+                        transform: transform.clone(),
+                        ..Default::default()
+                    });
+
+                    entity_commands.insert(Ghost::new(entity, *direction));
+
                     if let Some(collision_mask) = collision_mask {
-                        commands.with(collision_mask.clone());
+                        entity_commands.insert(collision_mask.clone());
                     }
                     if let Some(layer_mask) = layer_mask {
-                        commands.with(layer_mask.clone());
+                        entity_commands.insert(layer_mask.clone());
                     }
-                    entities.push(commands.current_entity());
+                    entities.push(Some(entity_commands.id()));
                 }
 
-                commands.insert(
-                    entity,
-                    Wrapped {
-                        ghosts: [entities[0], entities[1], entities[2]],
-                    },
-                );
+                commands.entity(entity).insert(Wrapped {
+                    ghosts: [entities[0], entities[1], entities[2]],
+                });
             }
         }
     }
@@ -158,7 +156,7 @@ fn despawn_ghosts_indirect(
 ) {
     for (entity, ghost) in q_ghosts.iter() {
         if q_targets.get(ghost.target).is_err() {
-            commands.despawn(entity);
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -188,10 +186,10 @@ fn despawn_ghosts_direct(
             if sprite_in_screen {
                 for ghost in wrapped.ghosts.iter() {
                     if let Some(ghost) = ghost {
-                        commands.despawn(*ghost);
+                        commands.entity(*ghost).despawn();
                     }
                 }
-                commands.remove::<Wrapped>(entity);
+                commands.entity(entity).remove::<Wrapped>();
             }
         }
     }
@@ -211,17 +209,13 @@ fn despawn_unwrapped(
     for projection in q_projection.iter() {
         for (entity, sprite, mut transform) in query.iter_mut() {
             let position = &mut transform.translation;
-            if position.x - sprite.size.x > projection.right {
-                commands.despawn(entity);
-            }
-            if position.x + sprite.size.x < projection.left {
-                commands.despawn(entity);
-            }
-            if position.y - sprite.size.y > projection.top {
-                commands.despawn(entity);
-            }
-            if position.y + sprite.size.y < projection.bottom {
-                commands.despawn(entity);
+            let out_of_right = position.x - sprite.size.x > projection.right;
+            let out_of_left = position.x + sprite.size.x < projection.left;
+            let out_of_top = position.y - sprite.size.y > projection.top;
+            let out_of_bottom = position.y + sprite.size.y < projection.bottom;
+
+            if out_of_right || out_of_left || out_of_top || out_of_bottom {
+                commands.entity(entity).despawn();
             }
         }
     }
@@ -275,7 +269,7 @@ fn auto_unwrap(mut commands: Commands, time: Res<Time>, mut query: Query<(Entity
                 false
             }
         {
-            commands.remove::<Wrap>(entity);
+            commands.entity(entity).remove::<Wrap>();
         }
     }
 }

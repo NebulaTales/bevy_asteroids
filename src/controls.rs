@@ -41,13 +41,13 @@ pub fn fire(
 ) {
     if keyboard.just_pressed(KeyCode::Space) {
         for entity in query.iter_mut() {
-            commands.insert(entity, Firing::default());
+            commands.entity(entity).insert(Firing::default());
         }
     }
 
     if keyboard.just_released(KeyCode::Space) {
         for entity in query.iter_mut() {
-            commands.remove::<Firing>(entity);
+            commands.entity(entity).remove::<Firing>();
         }
     }
 }
@@ -62,10 +62,10 @@ pub fn debug(
 
     for entity in query.iter() {
         if kill {
-            commands.despawn(entity);
+            commands.entity(entity).despawn();
         }
         if unwrap {
-            commands.remove::<Wrap>(entity);
+            commands.entity(entity).remove::<Wrap>();
         }
     }
 }

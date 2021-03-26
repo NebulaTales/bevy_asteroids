@@ -90,7 +90,7 @@ fn transform_based_check(
                     } else {
                         source
                     };
-                    commands.despawn(entity);
+                    commands.entity(entity).despawn();
                 }
             }
         }
