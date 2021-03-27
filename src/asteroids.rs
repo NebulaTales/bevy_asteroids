@@ -9,7 +9,6 @@ use bevy::{
     asset::{AssetServer, Assets, Handle},
     ecs::{
         entity::Entity,
-        query::With,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     input::{keyboard::KeyCode, Input},
@@ -18,20 +17,35 @@ use bevy::{
     transform::components::Transform,
 };
 
-struct Asteroid;
+#[derive(Debug)]
+enum Asteroid {
+    Big,
+    Small,
+    Tiny,
+}
 
 fn spawn_single(
     commands: &mut Commands,
     spawn_info: &SpawnerInfo,
+    asteroid: Asteroid,
     position: Vec2,
     velocity: Vec2,
     spin: f32,
 ) {
     let mut rng = thread_rng();
+    let scale = match asteroid {
+        Asteroid::Big => 1.0,
+        Asteroid::Small => 0.5,
+        Asteroid::Tiny => 0.25,
+    };
+
+    let transform = Transform::from_translation(Vec3::new(position.x, position.y, 10.0))
+        * Transform::from_scale(Vec3::new(scale, scale, 1.0));
+
     commands
         .spawn_bundle(SpriteSheetBundle {
             texture_atlas: spawn_info.texture.clone(),
-            transform: Transform::from_translation(Vec3::new(position.x, position.y, 10.0)),
+            transform,
             sprite: TextureAtlasSprite {
                 index: rng.gen_range(0..4),
                 ..Default::default()
@@ -45,7 +59,7 @@ fn spawn_single(
         })
         .insert(CollisionLayer(OBSTACLE))
         .insert(CollisionMask(PLAYER | AMMO))
-        .insert(Asteroid)
+        .insert(asteroid)
         .insert(Wrap::default());
 }
 
@@ -72,7 +86,14 @@ fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {
 
         let r = rng.gen_range(-5.0_f32..5.0_f32);
 
-        spawn_single(&mut commands, &spawn_info, spawn_position, direction, r);
+        spawn_single(
+            &mut commands,
+            &spawn_info,
+            Asteroid::Big,
+            spawn_position,
+            direction,
+            r,
+        );
     }
 }
 
@@ -80,15 +101,35 @@ fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {
 fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
-    q_asteroids: Query<Entity, With<Asteroid>>,
+    spawn_info: Res<SpawnerInfo>,
+    q_asteroids: Query<(Entity, &Asteroid, &Transform)>,
 ) {
     for collision in events.iter() {
-        if let Ok(entity) = q_asteroids.get(collision.source) {
+        if let Ok((entity, asteroid, transform)) = q_asteroids.get(collision.source) {
             commands.entity(entity).despawn();
+
+            if let Some(asteroid) = match asteroid {
+                Asteroid::Big => Some(Asteroid::Small),
+                Asteroid::Small => Some(Asteroid::Tiny),
+                Asteroid::Tiny => None,
+            } {
+                let mut rng = thread_rng();
+                let direction =
+                    Vec2::new(rng.gen_range(-150.0..150.0), rng.gen_range(-150.0..150.0));
+                let r = rng.gen_range(-5.0_f32..5.0_f32);
+                spawn_single(
+                    &mut commands,
+                    &spawn_info,
+                    asteroid,
+                    transform.translation.into(),
+                    direction,
+                    r,
+                )
+            }
+            // For now spawn a new single one at the same place
         }
     }
 }
-
 fn key_spawner(commands: Commands, keyboard: Res<Input<KeyCode>>, spawn_info: Res<SpawnerInfo>) {
     if keyboard.just_pressed(KeyCode::S) {
         spawn(1, commands, &spawn_info);
