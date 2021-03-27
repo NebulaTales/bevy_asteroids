@@ -14,10 +14,10 @@
 ///
 use crate::{Ghost, Shape2D};
 use bevy::{
-    app::{AppBuilder, EventReader, EventWriter, Events, Plugin},
+    app::{AppBuilder, EventWriter, Plugin},
     ecs::{
         entity::Entity,
-        system::{Commands, IntoSystem, Local, Query, Res, ResMut},
+        system::{IntoSystem, Query},
     },
     math::Vec2,
     transform::components::Transform,
@@ -113,18 +113,10 @@ fn transform_based_check(
     }
 }
 
-// prints events as they come in
-fn event_listener_system(mut commands: Commands, mut events: EventReader<CollisionEvent>) {
-    for collision in events.iter() {
-        commands.entity(collision.target).despawn();
-    }
-}
-
 pub struct CollisionPlugin;
 impl Plugin for CollisionPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_event::<CollisionEvent>()
-            .add_system(transform_based_check.system())
-            .add_system(event_listener_system.system());
+            .add_system(transform_based_check.system());
     }
 }

@@ -1,10 +1,11 @@
 use crate::{
-    Collider2D, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE, PLAYER,
+    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap, AMMO,
+    OBSTACLE, PLAYER,
 };
 use rand::prelude::*;
 
 use bevy::{
-    app::{AppBuilder, Plugin},
+    app::{AppBuilder, EventReader, Plugin},
     asset::{AssetServer, Assets, Handle},
     ecs::system::{Commands, IntoSystem, Res, ResMut},
     input::{keyboard::KeyCode, Input},
@@ -68,6 +69,13 @@ fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {
     }
 }
 
+// prints events as they come in
+fn destroy_on_collision(mut commands: Commands, mut events: EventReader<CollisionEvent>) {
+    for collision in events.iter() {
+        commands.entity(collision.target).despawn();
+    }
+}
+
 fn key_spawner(commands: Commands, keyboard: Res<Input<KeyCode>>, spawn_info: Res<SpawnerInfo>) {
     if keyboard.just_pressed(KeyCode::S) {
         spawn(1, commands, &spawn_info);
@@ -96,6 +104,7 @@ fn startup(
 impl Plugin for RulesPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
-            .add_system(key_spawner.system());
+            .add_system(key_spawner.system())
+            .add_system(destroy_on_collision.system());
     }
 }

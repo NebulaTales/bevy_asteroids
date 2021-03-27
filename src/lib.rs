@@ -3,20 +3,20 @@ use bevy::{
     math::Vec2,
 };
 
+mod asteroids;
 mod collision;
 mod controls;
 mod fire;
 mod movement;
-mod rules;
 mod startup;
 mod utils;
 mod wrap;
 
-pub use collision::{Collider2D, CollisionLayer, CollisionMask, CollisionPlugin};
+pub use asteroids::RulesPlugin;
+pub use collision::{Collider2D, CollisionEvent, CollisionLayer, CollisionMask, CollisionPlugin};
 pub use controls::{ControlsPlugin, PlayerControlled};
 pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
-pub use rules::RulesPlugin;
 pub use startup::StartupPlugin;
 pub use utils::DelayedAdd;
 pub use wrap::{Ghost, Wrap, WrapCamera, WrapPlugin, Wrapped};
