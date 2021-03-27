@@ -1,5 +1,5 @@
 use crate::{
-    Acceleration, Collider2D, CollisionMask, DelayedAdd, FireAngleError, Friction, LayerMask,
+    Acceleration, Collider2D, CollisionLayer, CollisionMask, DelayedAdd, FireAngleError, Friction,
     PlayerControlled, Shape2D, Thrust, Velocity, Wrap, WrapCamera, OBSTACLE, PLAYER,
 };
 
@@ -39,7 +39,7 @@ pub fn player(
             shape: Shape2D::Circle(32.0),
             ..Default::default()
         })
-        .insert(LayerMask(PLAYER))
+        .insert(CollisionLayer(PLAYER))
         .insert(CollisionMask(OBSTACLE))
         .insert(Wrap::default())
         .insert(FireAngleError(0.03));

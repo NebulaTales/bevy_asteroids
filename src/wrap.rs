@@ -1,4 +1,4 @@
-use crate::{CollisionMask, LayerMask};
+use crate::{CollisionLayer, CollisionMask};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::{Assets, Handle},
@@ -102,7 +102,7 @@ pub fn spawn_ghosts_sprite(
             &Transform,
             &Sprite,
             Option<&CollisionMask>,
-            Option<&LayerMask>,
+            Option<&CollisionLayer>,
         ),
         (With<Wrap>, Without<Wrapped>),
     >,
@@ -161,7 +161,7 @@ pub fn spawn_ghosts_sprite_atlas(
             &Transform,
             &TextureAtlasSprite,
             Option<&CollisionMask>,
-            Option<&LayerMask>,
+            Option<&CollisionLayer>,
         ),
         (With<Wrap>, Without<Wrapped>),
     >,

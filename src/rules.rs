@@ -1,5 +1,5 @@
 use crate::{
-    Collider2D, CollisionMask, LayerMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE, PLAYER,
+    Collider2D, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE, PLAYER,
 };
 use rand::prelude::*;
 
@@ -36,7 +36,7 @@ fn spawn_single(
             shape: Shape2D::Circle(32.0),
             ..Default::default()
         })
-        .insert(LayerMask(OBSTACLE))
+        .insert(CollisionLayer(OBSTACLE))
         .insert(CollisionMask(PLAYER | AMMO))
         .insert(Wrap::default());
 }

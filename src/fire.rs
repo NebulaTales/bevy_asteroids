@@ -1,4 +1,4 @@
-use crate::{Collider2D, CollisionMask, LayerMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE};
+use crate::{Collider2D, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::Assets,
@@ -44,7 +44,7 @@ fn spawn_single(
             shape: Shape2D::Rectangle(size),
             ..Default::default()
         })
-        .insert(LayerMask(AMMO))
+        .insert(CollisionLayer(AMMO))
         .insert(CollisionMask(OBSTACLE));
 }
 

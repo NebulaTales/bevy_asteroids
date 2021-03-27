@@ -1,9 +1,23 @@
-use crate::Ghost;
+/// Collision system
+/// Collisions work with a Layer/Mask design in mind (similar to Godot's):
+///
+/// A _layer_ is an identifier stored in a bit field (`u8`).
+/// When an entity has a `CollisionLayer` components, each bit of this value
+/// represent a different layer the entity belong to.
+///
+/// A `CollisionMask` is a component representing the set of layers an entity
+/// can collide with.
+///
+/// When a collision is detected between a _source_ (the one holding the
+/// `CollisionMask` component) and a _target_ (the one with a `CollisionLayer`),
+/// a `CollisionEvent` event is emitted that can be used within other systems.
+///
+use crate::{Ghost, Shape2D};
 use bevy::{
-    app::{AppBuilder, Plugin},
+    app::{AppBuilder, EventReader, EventWriter, Events, Plugin},
     ecs::{
         entity::Entity,
-        system::{Commands, IntoSystem, Query},
+        system::{Commands, IntoSystem, Local, Query, Res, ResMut},
     },
     math::Vec2,
     transform::components::Transform,
@@ -11,21 +25,15 @@ use bevy::{
 
 /// Defines the layers an entity belongs to
 #[derive(Clone, Copy)]
-pub struct LayerMask(pub u8);
+pub struct CollisionLayer(pub u8);
 
 /// Set the layers an entity interacts with
 #[derive(Clone, Copy)]
 pub struct CollisionMask(pub u8);
 
-pub enum Shape2D {
-    Rectangle(Vec2),
-    Circle(f32),
-}
-
-impl Default for Shape2D {
-    fn default() -> Self {
-        Shape2D::Rectangle(Vec2::new(1.0, 1.0))
-    }
+pub struct CollisionEvent {
+    pub source: Entity,
+    pub target: Entity,
 }
 
 #[derive(Default)]
@@ -70,36 +78,53 @@ fn check(
 
 // TODO Ghost management should be in wrapping plugin
 fn transform_based_check(
-    mut commands: Commands,
-    q_sources: Query<(Entity, &Collider2D, &LayerMask, &Transform, Option<&Ghost>)>,
-    q_targets: Query<(&Collider2D, &CollisionMask, &Transform)>,
+    mut events: EventWriter<CollisionEvent>,
+    q_sources: Query<(
+        Entity,
+        &Collider2D,
+        &CollisionMask,
+        &Transform,
+        Option<&Ghost>,
+    )>,
+    q_targets: Query<(Entity, &Collider2D, &CollisionLayer, &Transform)>,
 ) {
-    for (source, source_collider, source_layer_mask, source_transform, source_ghost) in
+    for (source, source_collider, source_collision_mask, source_transform, source_ghost) in
         q_sources.iter()
     {
-        for (target_collider, target_collision_mask, target_transform) in q_targets.iter() {
-            if source_layer_mask.0 & target_collision_mask.0 > 0u8 {
+        for (target, target_collider, target_collision_layer, target_transform) in q_targets.iter()
+        {
+            if source_collision_mask.0 & target_collision_layer.0 > 0u8 {
                 if check(
                     source_collider,
                     source_transform.translation.into(),
                     target_collider,
                     target_transform.translation.into(),
                 ) {
-                    let entity = if let Some(ghost) = source_ghost {
+                    let source = if let Some(ghost) = source_ghost {
                         ghost.target
                     } else {
                         source
                     };
-                    commands.entity(entity).despawn();
+                    //commands.entity(entity).despawn();
+                    events.send(CollisionEvent { source, target });
                 }
             }
         }
     }
 }
 
+// prints events as they come in
+fn event_listener_system(mut commands: Commands, mut events: EventReader<CollisionEvent>) {
+    for collision in events.iter() {
+        commands.entity(collision.target).despawn();
+    }
+}
+
 pub struct CollisionPlugin;
 impl Plugin for CollisionPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(transform_based_check.system());
+        app.add_event::<CollisionEvent>()
+            .add_system(transform_based_check.system())
+            .add_system(event_listener_system.system());
     }
 }
