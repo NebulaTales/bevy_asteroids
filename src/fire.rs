@@ -1,9 +1,16 @@
-use crate::{Collider2D, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap, AMMO, OBSTACLE};
+use crate::{
+    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap, AMMO,
+    OBSTACLE,
+};
 use bevy::{
-    app::{AppBuilder, Plugin},
+    app::{AppBuilder, EventReader, Plugin},
     asset::Assets,
     core::{Time, Timer},
-    ecs::system::{Commands, IntoSystem, Query, Res, ResMut},
+    ecs::{
+        entity::Entity,
+        query::With,
+        system::{Commands, IntoSystem, Query, Res, ResMut},
+    },
     math::{Vec2, Vec3},
     render::color::Color,
     sprite::Sprite,
@@ -23,6 +30,8 @@ impl Default for Firing {
         Firing { time_span: None }
     }
 }
+
+struct Fire;
 
 fn spawn_single(
     commands: &mut Commands,
@@ -44,8 +53,21 @@ fn spawn_single(
             shape: Shape2D::Rectangle(size),
             ..Default::default()
         })
+        .insert(Fire)
         .insert(CollisionLayer(AMMO))
         .insert(CollisionMask(OBSTACLE));
+}
+
+fn destroy_on_collision(
+    mut commands: Commands,
+    mut events: EventReader<CollisionEvent>,
+    query: Query<Entity, With<Fire>>,
+) {
+    for collision in events.iter() {
+        if let Ok(id) = query.get(collision.source) {
+            commands.entity(id).despawn();
+        }
+    }
 }
 
 const INITIAL_SPEED: f32 = 400.0;
@@ -111,6 +133,7 @@ pub struct FirePlugin;
 
 impl Plugin for FirePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(spawn_fire.system());
+        app.add_system(spawn_fire.system())
+            .add_system(destroy_on_collision.system());
     }
 }
