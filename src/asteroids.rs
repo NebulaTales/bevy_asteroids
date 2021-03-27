@@ -7,12 +7,18 @@ use rand::prelude::*;
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
     asset::{AssetServer, Assets, Handle},
-    ecs::system::{Commands, IntoSystem, Res, ResMut},
+    ecs::{
+        entity::Entity,
+        query::With,
+        system::{Commands, IntoSystem, Query, Res, ResMut},
+    },
     input::{keyboard::KeyCode, Input},
     math::{Vec2, Vec3},
     sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
     transform::components::Transform,
 };
+
+struct Asteroid;
 
 fn spawn_single(
     commands: &mut Commands,
@@ -39,6 +45,7 @@ fn spawn_single(
         })
         .insert(CollisionLayer(OBSTACLE))
         .insert(CollisionMask(PLAYER | AMMO))
+        .insert(Asteroid)
         .insert(Wrap::default());
 }
 
@@ -70,9 +77,15 @@ fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {
 }
 
 // prints events as they come in
-fn destroy_on_collision(mut commands: Commands, mut events: EventReader<CollisionEvent>) {
+fn destroy_on_collision(
+    mut commands: Commands,
+    mut events: EventReader<CollisionEvent>,
+    q_asteroids: Query<Entity, With<Asteroid>>,
+) {
     for collision in events.iter() {
-        commands.entity(collision.target).despawn();
+        if let Ok(entity) = q_asteroids.get(collision.source) {
+            commands.entity(entity).despawn();
+        }
     }
 }
 

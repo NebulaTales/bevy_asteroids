@@ -34,6 +34,7 @@ pub struct CollisionMask(pub u8);
 pub struct CollisionEvent {
     pub source: Entity,
     pub target: Entity,
+    pub layer_filter: u8,
 }
 
 #[derive(Default)]
@@ -93,7 +94,8 @@ fn transform_based_check(
     {
         for (target, target_collider, target_collision_layer, target_transform) in q_targets.iter()
         {
-            if source_collision_mask.0 & target_collision_layer.0 > 0u8 {
+            let layer_filter = source_collision_mask.0 & target_collision_layer.0;
+            if layer_filter > 0u8 {
                 if check(
                     source_collider,
                     source_transform.translation.into(),
@@ -105,8 +107,12 @@ fn transform_based_check(
                     } else {
                         source
                     };
-                    //commands.entity(entity).despawn();
-                    events.send(CollisionEvent { source, target });
+
+                    events.send(CollisionEvent {
+                        source,
+                        target,
+                        layer_filter,
+                    });
                 }
             }
         }
