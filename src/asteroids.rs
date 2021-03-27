@@ -17,7 +17,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-#[derive(Debug)]
+#[derive(Copy, Clone)]
 enum Asteroid {
     Big,
     Small,
@@ -54,7 +54,7 @@ fn spawn_single(
         })
         .insert(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
         .insert(Collider2D {
-            shape: Shape2D::Circle(32.0),
+            shape: Shape2D::Circle(32.0 * scale),
             ..Default::default()
         })
         .insert(CollisionLayer(OBSTACLE))
@@ -63,23 +63,28 @@ fn spawn_single(
         .insert(Wrap::default());
 }
 
-fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {
+fn spawn_radius(
+    number: u16,
+    commands: &mut Commands,
+    spawn_info: &SpawnerInfo,
+    asteroid: Asteroid,
+    center: Vec2,
+    radius: Vec2,
+    direction_radius: Vec2,
+) {
     let mut rng = thread_rng();
-
-    let spawn_radius = Vec2::new(600.0, 600.0);
-    let direction_radius = Vec2::new(100.0, 100.0);
 
     for _ in 0..number {
         let spawn_angle = rng.gen_range(0.0..std::f32::consts::PI * 2.0);
         let direction_angle = rng.gen_range(0.0..std::f32::consts::PI * 2.0);
 
         let spawn_position = Vec2::new(
-            spawn_angle.cos() * spawn_radius.x,
-            spawn_angle.sin() * spawn_radius.y,
+            center.x + spawn_angle.cos() * radius.x,
+            center.y + spawn_angle.sin() * radius.y,
         );
         let direction_position = Vec2::new(
-            direction_angle.cos() * direction_radius.x,
-            direction_angle.sin() * direction_radius.y,
+            center.x + direction_angle.cos() * direction_radius.x,
+            center.y + direction_angle.sin() * direction_radius.y,
         );
         let speed = rng.gen_range(50_f32..150_f32);
         let direction = (direction_position - spawn_position).normalize() * speed;
@@ -87,9 +92,9 @@ fn spawn(number: u16, mut commands: Commands, spawn_info: &SpawnerInfo) {
         let r = rng.gen_range(-5.0_f32..5.0_f32);
 
         spawn_single(
-            &mut commands,
+            commands,
             &spawn_info,
-            Asteroid::Big,
+            asteroid,
             spawn_position,
             direction,
             r,
@@ -113,26 +118,39 @@ fn destroy_on_collision(
                 Asteroid::Small => Some(Asteroid::Tiny),
                 Asteroid::Tiny => None,
             } {
-                let mut rng = thread_rng();
-                let direction =
-                    Vec2::new(rng.gen_range(-150.0..150.0), rng.gen_range(-150.0..150.0));
-                let r = rng.gen_range(-5.0_f32..5.0_f32);
-                spawn_single(
+                spawn_radius(
+                    3,
                     &mut commands,
                     &spawn_info,
                     asteroid,
                     transform.translation.into(),
-                    direction,
-                    r,
-                )
+                    Vec2::new(10.0, 10.0),
+                    Vec2::new(15.0, 15.0),
+                );
             }
             // For now spawn a new single one at the same place
         }
     }
 }
-fn key_spawner(commands: Commands, keyboard: Res<Input<KeyCode>>, spawn_info: Res<SpawnerInfo>) {
+
+fn key_spawner(
+    mut commands: Commands,
+    keyboard: Res<Input<KeyCode>>,
+    spawn_info: Res<SpawnerInfo>,
+) {
+    let radius = Vec2::new(600.0, 600.0);
+    let direction_radius = Vec2::new(100.0, 100.0);
+    let center = Default::default();
     if keyboard.just_pressed(KeyCode::S) {
-        spawn(1, commands, &spawn_info);
+        spawn_radius(
+            1,
+            &mut commands,
+            &spawn_info,
+            Asteroid::Big,
+            center,
+            radius,
+            direction_radius,
+        );
     }
 }
 
