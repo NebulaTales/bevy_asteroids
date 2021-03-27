@@ -63,32 +63,46 @@ fn spawn_single(
         .insert(Wrap::default());
 }
 
+#[derive(Copy, Clone)]
+struct SpawnArea {
+    center: Vec2,
+    radius: Vec2,
+}
+
+impl SpawnArea {
+    fn at(&self, angle: f32) -> Vec2 {
+        Vec2::new(
+            self.center.x + angle.cos() * self.radius.x,
+            self.center.y + angle.sin() * self.radius.y,
+        )
+    }
+
+    fn random_at(&self) -> Vec2 {
+        self.at(thread_rng().gen_range(0.0..std::f32::consts::PI * 2.0))
+    }
+
+    fn random_to(&self, direction: &SpawnArea) -> (Vec2, Vec2) {
+        let spawn_position = self.random_at();
+        let direction_position = direction.random_at();
+        let speed = thread_rng().gen_range(50_f32..150_f32);
+        let direction = (direction_position - spawn_position).normalize() * speed;
+
+        (spawn_position, direction)
+    }
+}
+
 fn spawn_radius(
     number: u16,
     commands: &mut Commands,
     spawn_info: &SpawnerInfo,
     asteroid: Asteroid,
-    center: Vec2,
-    radius: Vec2,
-    direction_radius: Vec2,
+    position: SpawnArea,
+    direction: SpawnArea,
 ) {
     let mut rng = thread_rng();
 
     for _ in 0..number {
-        let spawn_angle = rng.gen_range(0.0..std::f32::consts::PI * 2.0);
-        let direction_angle = rng.gen_range(0.0..std::f32::consts::PI * 2.0);
-
-        let spawn_position = Vec2::new(
-            center.x + spawn_angle.cos() * radius.x,
-            center.y + spawn_angle.sin() * radius.y,
-        );
-        let direction_position = Vec2::new(
-            center.x + direction_angle.cos() * direction_radius.x,
-            center.y + direction_angle.sin() * direction_radius.y,
-        );
-        let speed = rng.gen_range(50_f32..150_f32);
-        let direction = (direction_position - spawn_position).normalize() * speed;
-
+        let (spawn_position, direction) = position.random_to(&direction);
         let r = rng.gen_range(-5.0_f32..5.0_f32);
 
         spawn_single(
@@ -118,38 +132,40 @@ fn destroy_on_collision(
                 Asteroid::Small => Some(Asteroid::Tiny),
                 Asteroid::Tiny => None,
             } {
-                spawn_radius(
-                    3,
-                    &mut commands,
-                    &spawn_info,
-                    asteroid,
-                    transform.translation.into(),
-                    Vec2::new(10.0, 10.0),
-                    Vec2::new(15.0, 15.0),
-                );
+                let position = SpawnArea {
+                    center: transform.translation.into(),
+                    radius: Vec2::new(10.0, 10.0),
+                };
+                let direction = SpawnArea {
+                    center: transform.translation.into(),
+                    radius: Vec2::new(15.0, 15.0),
+                };
+                spawn_radius(3, &mut commands, &spawn_info, asteroid, position, direction);
             }
-            // For now spawn a new single one at the same place
         }
     }
 }
 
+// TODO radius should be based on screen
 fn key_spawner(
     mut commands: Commands,
     keyboard: Res<Input<KeyCode>>,
     spawn_info: Res<SpawnerInfo>,
 ) {
-    let radius = Vec2::new(600.0, 600.0);
-    let direction_radius = Vec2::new(100.0, 100.0);
-    let center = Default::default();
     if keyboard.just_pressed(KeyCode::S) {
         spawn_radius(
             1,
             &mut commands,
             &spawn_info,
             Asteroid::Big,
-            center,
-            radius,
-            direction_radius,
+            SpawnArea {
+                center: Default::default(),
+                radius: Vec2::new(600.0, 600.0),
+            },
+            SpawnArea {
+                center: Default::default(),
+                radius: Vec2::new(100.0, 100.0),
+            },
         );
     }
 }
