@@ -17,7 +17,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum Asteroid {
     Big,
     Small,
@@ -42,25 +42,28 @@ fn spawn_single(
     let transform = Transform::from_translation(Vec3::new(position.x, position.y, 10.0))
         * Transform::from_scale(Vec3::new(scale, scale, 1.0));
 
-    commands
-        .spawn_bundle(SpriteSheetBundle {
-            texture_atlas: spawn_info.texture.clone(),
-            transform,
-            sprite: TextureAtlasSprite {
-                index: rng.gen_range(0..4),
-                ..Default::default()
-            },
+    let mut e = commands.spawn();
+    e.insert_bundle(SpriteSheetBundle {
+        texture_atlas: spawn_info.texture.clone(),
+        transform,
+        sprite: TextureAtlasSprite {
+            index: rng.gen_range(0..4),
             ..Default::default()
-        })
-        .insert(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
-        .insert(Collider2D {
-            shape: Shape2D::Circle(32.0 * scale),
-            ..Default::default()
-        })
-        .insert(CollisionLayer(OBSTACLE))
-        .insert(CollisionMask(PLAYER | AMMO))
-        .insert(asteroid)
-        .insert(Wrap::default());
+        },
+        ..Default::default()
+    })
+    .insert(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
+    .insert(Collider2D {
+        shape: Shape2D::Circle(32.0 * scale),
+        ..Default::default()
+    })
+    .insert(CollisionLayer(OBSTACLE))
+    .insert(CollisionMask(PLAYER | AMMO))
+    .insert(asteroid);
+
+    if asteroid != Asteroid::Tiny {
+        e.insert(Wrap::default());
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -121,10 +124,11 @@ fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
     spawn_info: Res<SpawnerInfo>,
-    q_asteroids: Query<(Entity, &Asteroid, &Transform)>,
+    q_asteroids: Query<(Entity, &Asteroid, &Transform, Option<&Velocity>)>,
+    q_collides_with: Query<(&Transform, Option<&Velocity>)>,
 ) {
     for collision in events.iter() {
-        if let Ok((entity, asteroid, transform)) = q_asteroids.get(collision.source) {
+        if let Ok((entity, asteroid, transform, velocity)) = q_asteroids.get(collision.source) {
             commands.entity(entity).despawn();
 
             if let Some(asteroid) = match asteroid {
@@ -132,13 +136,40 @@ fn destroy_on_collision(
                 Asteroid::Small => Some(Asteroid::Tiny),
                 Asteroid::Tiny => None,
             } {
+                let center = transform.translation.into();
                 let position = SpawnArea {
-                    center: transform.translation.into(),
+                    center,
                     radius: Vec2::new(10.0, 10.0),
                 };
+
+                let source_velocity = if let Some(&velocity) = velocity {
+                    velocity
+                } else {
+                    Default::default()
+                };
+                let (target_position, target_velocity) =
+                    if let Ok((target_position, target_velocity)) =
+                        q_collides_with.get(collision.target)
+                    {
+                        (
+                            target_position.translation.into(),
+                            if let Some(&target_velocity) = target_velocity {
+                                target_velocity
+                            } else {
+                                Default::default()
+                            },
+                        )
+                    } else {
+                        (center, Default::default())
+                    };
+
+                let p = center + center - target_position
+                    + source_velocity.translation * 2.0
+                    + target_velocity.translation;
+
                 let direction = SpawnArea {
-                    center: transform.translation.into(),
-                    radius: Vec2::new(15.0, 15.0),
+                    center: p,
+                    radius: Vec2::new(100.0, 100.0),
                 };
                 spawn_radius(3, &mut commands, &spawn_info, asteroid, position, direction);
             }
