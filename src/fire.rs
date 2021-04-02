@@ -31,6 +31,11 @@ impl Default for Firing {
     }
 }
 
+const BULLET_SIZE: f32 = 3.0;
+const FLOOR_SPEED: f32 = 200.0;
+const INITIAL_SPEED: f32 = 400.0;
+const PEW_PEW_SPEED: u64 = 1;
+
 struct Fire;
 
 fn spawn_single(
@@ -39,7 +44,7 @@ fn spawn_single(
     position: Vec3,
     velocity: Vec2,
 ) {
-    let size = Vec2::new(3.0, 3.0);
+    let size = Vec2::new(BULLET_SIZE, BULLET_SIZE);
     commands
         .spawn_bundle(SpriteBundle {
             material: materials.add(Color::rgb(1.0, 0.5, 0.5).into()),
@@ -48,7 +53,7 @@ fn spawn_single(
             ..Default::default()
         })
         .insert(Velocity::new(velocity, 0.0))
-        .insert(Wrap::from_count(2))
+        .insert(Wrap::from_count(1))
         .insert(Collider2D {
             shape: Shape2D::Rectangle(size),
             ..Default::default()
@@ -69,10 +74,6 @@ fn destroy_on_collision(
         }
     }
 }
-
-const INITIAL_SPEED: f32 = 400.0;
-const FLOOR_SPEED: f32 = 200.0;
-const PEW_PEW_SPEED: u64 = 250;
 
 pub fn spawn_fire(
     mut commands: Commands,

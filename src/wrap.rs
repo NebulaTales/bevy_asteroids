@@ -87,6 +87,32 @@ impl Ghost {
     }
 }
 
+#[derive(Copy, Clone, Default)]
+struct Rect {
+    left: f32,
+    right: f32,
+    top: f32,
+    bottom: f32,
+}
+
+impl From<(Vec2, Vec2)> for Rect {
+    fn from(value: (Vec2, Vec2)) -> Self {
+        Rect {
+            left: value.0.x,
+            right: value.1.x,
+            top: value.0.y,
+            bottom: value.0.y,
+        }
+    }
+}
+
+fn rect_intersect(rect_a: Rect, rect_b: Rect) -> bool {
+    !(rect_a.left < rect_b.right
+        && rect_a.right > rect_b.left
+        && rect_a.top > rect_b.bottom
+        && rect_a.bottom < rect_b.top)
+}
+
 /// Ghost creation function
 /// This system looks for any valid entity with the `Wrap` tag and no `Wrapped` tag yet.
 /// For each, it'll create 3 ghosts (tagged `Ghost`) that will position correctly using
@@ -108,19 +134,20 @@ pub fn spawn_ghosts_sprite(
     >,
 ) {
     for projection in q_projection.iter() {
-        let screen_min = Vec2::new(projection.left, projection.bottom);
-        let screen_max = Vec2::new(projection.right, projection.top);
+        let screen_rect = (
+            Vec2::new(projection.left, projection.bottom),
+            Vec2::new(projection.right, projection.top),
+        )
+            .into();
 
         for (entity, material, transform, sprite, collision_mask, layer_mask) in query.iter() {
-            let sprite_min = transform.translation.truncate() - sprite.size / 2.0;
-            let sprite_max = transform.translation.truncate() + sprite.size / 2.0;
+            let sprite_rect = (
+                transform.translation.truncate() - sprite.size / 2.0,
+                transform.translation.truncate() + sprite.size / 2.0,
+            )
+                .into();
 
-            let sprite_in_screen = sprite_min.x > screen_min.x
-                && sprite_min.y > screen_min.y
-                && sprite_max.x < screen_max.x
-                && sprite_max.y < screen_max.y;
-
-            if sprite_in_screen {
+            if rect_intersect(sprite_rect, screen_rect) {
                 // TODO Should do better
                 let mut entities = Vec::new();
 
@@ -167,26 +194,25 @@ pub fn spawn_ghosts_sprite_atlas(
     >,
 ) {
     for projection in q_projection.iter() {
-        let screen_min = Vec2::new(projection.left, projection.bottom);
-        let screen_max = Vec2::new(projection.right, projection.top);
+        let screen_rect = (
+            Vec2::new(projection.left, projection.bottom),
+            Vec2::new(projection.right, projection.top),
+        )
+            .into();
 
         for (entity, texture_atlas, transform, sprite, collision_mask, layer_mask) in query.iter() {
-            let (sprite_min, sprite_max) =
-                if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
-                    (
-                        transform.translation.truncate() - texture_atlas.size / 2.0,
-                        transform.translation.truncate() + texture_atlas.size / 2.0,
-                    )
-                } else {
-                    (Default::default(), Default::default())
-                };
+            let sprite_rect = if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
+                (
+                    transform.translation.truncate() - texture_atlas.size / 2.0,
+                    transform.translation.truncate() + texture_atlas.size / 2.0,
+                )
+                    .into()
+            } else {
+                (Default::default(), Default::default())
+            }
+            .into();
 
-            let sprite_in_screen = sprite_min.x > screen_min.x
-                && sprite_min.y > screen_min.y
-                && sprite_max.x < screen_max.x
-                && sprite_max.y < screen_max.y;
-
-            if sprite_in_screen {
+            if rect_intersect(sprite_rect, screen_rect) {
                 // TODO Should do better
                 let mut entities = Vec::new();
 
