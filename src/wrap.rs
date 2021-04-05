@@ -31,6 +31,7 @@ pub struct WrapCamera;
 pub struct Wrap {
     remaining: Option<u8>,
     timer: Option<Timer>,
+    first_pass: bool,
 }
 
 impl Default for Wrap {
@@ -38,6 +39,7 @@ impl Default for Wrap {
         Wrap {
             remaining: None,
             timer: None,
+            first_pass: true,
         }
     }
 }
@@ -47,6 +49,7 @@ impl Wrap {
         Wrap {
             remaining: Some(remaining),
             timer: None,
+            ..Default::default()
         }
     }
 
@@ -54,6 +57,7 @@ impl Wrap {
         Wrap {
             remaining: None,
             timer: Some(Timer::new(duration, false)),
+            ..Default::default()
         }
     }
 }
@@ -87,30 +91,77 @@ impl Ghost {
     }
 }
 
-#[derive(Copy, Clone, Default)]
-struct Rect {
-    left: f32,
-    right: f32,
-    top: f32,
-    bottom: f32,
+pub struct Area {
+    pub left: f32,
+    pub right: f32,
+    pub top: f32,
+    pub bottom: f32,
 }
 
-impl From<(Vec2, Vec2)> for Rect {
-    fn from(value: (Vec2, Vec2)) -> Self {
-        Rect {
-            left: value.0.x,
-            right: value.1.x,
-            top: value.0.y,
-            bottom: value.0.y,
+impl Area {
+    fn new(position: Vec2, size: Vec2) -> Area {
+        let min = position - size / 2.0;
+        let max = position + size / 2.0;
+
+        Area {
+            left: min.x,
+            right: max.x,
+            top: max.y,
+            bottom: min.y,
         }
     }
-}
 
-fn rect_intersect(rect_a: Rect, rect_b: Rect) -> bool {
-    !(rect_a.left < rect_b.right
-        && rect_a.right > rect_b.left
-        && rect_a.top > rect_b.bottom
-        && rect_a.bottom < rect_b.top)
+    fn from_position_atlas(position: Vec2, texture_atlas: &TextureAtlas, index: usize) -> Area {
+        let texture_rect = texture_atlas.textures[index as usize];
+        let size = Vec2::new(texture_rect.width(), texture_rect.height());
+        Area::new(position, size)
+    }
+
+    fn from_projection(projection: &OrthographicProjection) -> Area {
+        Area {
+            left: projection.left,
+            right: projection.right,
+            top: projection.top,
+            bottom: projection.bottom,
+        }
+    }
+
+    fn inside(&self, rect: &Self) -> bool {
+        rect.right > self.right
+            && rect.left < self.left
+            && rect.top > self.top
+            && rect.bottom < self.bottom
+    }
+
+    fn outside(&self, rect: &Self) -> bool {
+        self.bottom > rect.top
+            || self.top < rect.bottom
+            || self.right < rect.left
+            || self.left > rect.right
+    }
+
+    fn overlap(&self, rect: &Self) -> bool {
+        !self.outside(rect)
+    }
+
+    fn center(&self) -> Vec2 {
+        Vec2::new(
+            (self.left + self.right) / 2.0,
+            (self.bottom + self.top) / 2.0,
+        )
+    }
+
+    fn size(&self) -> Vec2 {
+        Vec2::new(self.right - self.left, self.top - self.bottom)
+    }
+
+    fn distance_squared(&self, point: Vec2) -> f32 {
+        let size = self.size();
+        let center = self.center();
+        let dx = ((point.x - center.x).abs() - size.x / 2.0).max(0.0);
+        let dy = ((point.y - center.y).abs() - size.y / 2.0).max(0.0);
+        return dx * dx + dy * dy;
+    }
 }
 
 /// Ghost creation function
@@ -121,34 +172,31 @@ fn rect_intersect(rect_a: Rect, rect_b: Rect) -> bool {
 pub fn spawn_ghosts_sprite(
     mut commands: Commands,
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
-    query: Query<
+    mut query: Query<
         (
             Entity,
+            &mut Wrap,
             &Handle<ColorMaterial>,
             &Transform,
             &Sprite,
             Option<&CollisionMask>,
             Option<&CollisionLayer>,
         ),
-        (With<Wrap>, Without<Wrapped>),
+        Without<Wrapped>,
     >,
 ) {
     for projection in q_projection.iter() {
-        let screen_rect = (
-            Vec2::new(projection.left, projection.bottom),
-            Vec2::new(projection.right, projection.top),
-        )
-            .into();
+        let screen_rect = Area::from_projection(&projection);
 
-        for (entity, material, transform, sprite, collision_mask, layer_mask) in query.iter() {
-            let sprite_rect = (
-                transform.translation.truncate() - sprite.size / 2.0,
-                transform.translation.truncate() + sprite.size / 2.0,
-            )
-                .into();
+        for (entity, mut wrap, material, transform, sprite, collision_mask, layer_mask) in
+            query.iter_mut()
+        {
+            let sprite_rect = Area::new(transform.translation.truncate(), sprite.size);
 
-            if rect_intersect(sprite_rect, screen_rect) {
-                // TODO Should do better
+            let check = (wrap.first_pass && sprite_rect.overlap(&screen_rect))
+                || sprite_rect.inside(&screen_rect);
+
+            if check {
                 let mut entities = Vec::new();
 
                 for direction in &[GDir::WestEast, GDir::NorthSouth, GDir::Diagonal] {
@@ -173,6 +221,8 @@ pub fn spawn_ghosts_sprite(
                     ghosts: [entities[0], entities[1], entities[2]],
                 });
             }
+
+            wrap.first_pass = false;
         }
     }
 }
@@ -181,66 +231,73 @@ pub fn spawn_ghosts_sprite_atlas(
     mut commands: Commands,
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     texture_atlases: Res<Assets<TextureAtlas>>,
-    query: Query<
+    mut query: Query<
         (
             Entity,
+            &mut Wrap,
             &Handle<TextureAtlas>,
             &Transform,
             &TextureAtlasSprite,
             Option<&CollisionMask>,
             Option<&CollisionLayer>,
         ),
-        (With<Wrap>, Without<Wrapped>),
+        Without<Wrapped>,
     >,
 ) {
     for projection in q_projection.iter() {
-        let screen_rect = (
-            Vec2::new(projection.left, projection.bottom),
-            Vec2::new(projection.right, projection.top),
-        )
-            .into();
+        let screen_rect = Area::from_projection(&projection);
 
-        for (entity, texture_atlas, transform, sprite, collision_mask, layer_mask) in query.iter() {
-            let sprite_rect = if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
-                (
-                    transform.translation.truncate() - texture_atlas.size / 2.0,
-                    transform.translation.truncate() + texture_atlas.size / 2.0,
-                )
-                    .into()
-            } else {
-                (Default::default(), Default::default())
-            }
-            .into();
+        for (
+            entity,
+            mut wrap,
+            texture_atlas_handle,
+            transform,
+            sprite,
+            collision_mask,
+            layer_mask,
+        ) in query.iter_mut()
+        {
+            if let Some(texture_atlas) = texture_atlases.get(texture_atlas_handle) {
+                let sprite_rect = Area::from_position_atlas(
+                    transform.translation.truncate(),
+                    texture_atlas,
+                    sprite.index as usize,
+                );
 
-            if rect_intersect(sprite_rect, screen_rect) {
-                // TODO Should do better
-                let mut entities = Vec::new();
+                let check = (wrap.first_pass && sprite_rect.overlap(&screen_rect))
+                    || sprite_rect.inside(&screen_rect);
 
-                for direction in &[GDir::WestEast, GDir::NorthSouth, GDir::Diagonal] {
-                    let mut entity_commands = commands.spawn_bundle(SpriteSheetBundle {
-                        texture_atlas: texture_atlas.clone(),
-                        transform: transform.clone(),
-                        sprite: TextureAtlasSprite {
-                            index: sprite.index,
+                if check {
+                    let mut entities = Vec::new();
+
+                    for direction in &[GDir::WestEast, GDir::NorthSouth, GDir::Diagonal] {
+                        let mut entity_commands = commands.spawn_bundle(SpriteSheetBundle {
+                            texture_atlas: texture_atlas_handle.clone(),
+                            transform: transform.clone(),
+                            sprite: TextureAtlasSprite {
+                                index: sprite.index,
+                                ..Default::default()
+                            },
                             ..Default::default()
-                        },
-                        ..Default::default()
+                        });
+
+                        entity_commands.insert(Ghost::new(entity, *direction));
+
+                        if let Some(collision_mask) = collision_mask {
+                            entity_commands.insert(collision_mask.clone());
+                        }
+                        if let Some(layer_mask) = layer_mask {
+                            entity_commands.insert(layer_mask.clone());
+                        }
+                        entities.push(Some(entity_commands.id()));
+                    }
+
+                    commands.entity(entity).insert(Wrapped {
+                        ghosts: [entities[0], entities[1], entities[2]],
                     });
-
-                    entity_commands.insert(Ghost::new(entity, *direction));
-
-                    if let Some(collision_mask) = collision_mask {
-                        entity_commands.insert(collision_mask.clone());
-                    }
-                    if let Some(layer_mask) = layer_mask {
-                        entity_commands.insert(layer_mask.clone());
-                    }
-                    entities.push(Some(entity_commands.id()));
                 }
 
-                commands.entity(entity).insert(Wrapped {
-                    ghosts: [entities[0], entities[1], entities[2]],
-                });
+                wrap.first_pass = false;
             }
         }
     }
@@ -271,18 +328,12 @@ fn despawn_ghosts_direct_sprite(
     query: Query<(Entity, &Wrapped, &Transform, &Sprite), Without<Wrap>>,
 ) {
     for projection in q_projection.iter() {
-        let screen_min = Vec2::new(projection.left, projection.bottom);
-        let screen_max = Vec2::new(projection.right, projection.top);
+        let screen_rect = Area::from_projection(projection);
 
         for (entity, wrapped, transform, sprite) in query.iter() {
-            let sprite_min = transform.translation.truncate() - sprite.size / 2.0;
-            let sprite_max = transform.translation.truncate() + sprite.size / 2.0;
-            let sprite_in_screen = sprite_min.x > screen_min.x
-                && sprite_min.y > screen_min.y
-                && sprite_max.x < screen_max.x
-                && sprite_max.y < screen_max.y;
+            let sprite_rect = Area::new(transform.translation.truncate(), sprite.size);
 
-            if sprite_in_screen {
+            if sprite_rect.inside(&screen_rect) {
                 for ghost in wrapped.ghosts.iter() {
                     if let Some(ghost) = ghost {
                         commands.entity(*ghost).despawn();
@@ -298,35 +349,36 @@ fn despawn_ghosts_direct_sprite_atlas(
     mut commands: Commands,
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     texture_atlases: Res<Assets<TextureAtlas>>,
-    query: Query<(Entity, &Wrapped, &Transform, &Handle<TextureAtlas>), Without<Wrap>>,
+    query: Query<
+        (
+            Entity,
+            &Wrapped,
+            &Transform,
+            &Handle<TextureAtlas>,
+            &TextureAtlasSprite,
+        ),
+        Without<Wrap>,
+    >,
 ) {
     for projection in q_projection.iter() {
-        let screen_min = Vec2::new(projection.left, projection.bottom);
-        let screen_max = Vec2::new(projection.right, projection.top);
+        let screen_rect = Area::from_projection(projection);
 
-        for (entity, wrapped, transform, texture_atlas) in query.iter() {
-            let (sprite_min, sprite_max) =
-                if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
-                    (
-                        transform.translation.truncate() - texture_atlas.size / 2.0,
-                        transform.translation.truncate() + texture_atlas.size / 2.0,
-                    )
-                } else {
-                    (Default::default(), Default::default())
-                };
+        for (entity, wrapped, transform, texture_atlas, sprite) in query.iter() {
+            if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
+                let sprite_rect = Area::from_position_atlas(
+                    transform.translation.truncate(),
+                    texture_atlas,
+                    sprite.index as usize,
+                );
 
-            let sprite_in_screen = sprite_min.x > screen_min.x
-                && sprite_min.y > screen_min.y
-                && sprite_max.x < screen_max.x
-                && sprite_max.y < screen_max.y;
-
-            if sprite_in_screen {
-                for ghost in wrapped.ghosts.iter() {
-                    if let Some(ghost) = ghost {
-                        commands.entity(*ghost).despawn();
+                if sprite_rect.inside(&screen_rect) {
+                    for ghost in wrapped.ghosts.iter() {
+                        if let Some(ghost) = ghost {
+                            commands.entity(*ghost).despawn();
+                        }
                     }
+                    commands.entity(entity).remove::<Wrapped>();
                 }
-                commands.entity(entity).remove::<Wrapped>();
             }
         }
     }
@@ -343,14 +395,11 @@ fn despawn_unwrapped_sprite(
     >,
 ) {
     for projection in q_projection.iter() {
-        for (entity, sprite, mut transform) in query.iter_mut() {
-            let position = &mut transform.translation;
-            let out_of_right = position.x - sprite.size.x > projection.right;
-            let out_of_left = position.x + sprite.size.x < projection.left;
-            let out_of_top = position.y - sprite.size.y > projection.top;
-            let out_of_bottom = position.y + sprite.size.y < projection.bottom;
+        let screen_rect = Area::from_projection(projection);
+        for (entity, sprite, transform) in query.iter_mut() {
+            let sprite_rect = Area::new(transform.translation.truncate(), sprite.size);
 
-            if out_of_right || out_of_left || out_of_top || out_of_bottom {
+            if sprite_rect.outside(&screen_rect) {
                 commands.entity(entity).despawn();
             }
         }
@@ -362,25 +411,120 @@ fn despawn_unwrapped_sprite_atlas(
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     texture_atlases: Res<Assets<TextureAtlas>>,
     mut query: Query<
-        (Entity, &Handle<TextureAtlas>, &mut Transform),
+        (
+            Entity,
+            &Handle<TextureAtlas>,
+            &mut Transform,
+            &TextureAtlasSprite,
+        ),
         (Without<Wrap>, Without<Wrapped>, Without<Ghost>),
     >,
 ) {
     for projection in q_projection.iter() {
-        for (entity, texture_atlas, mut transform) in query.iter_mut() {
-            let size = if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
-                texture_atlas.size
-            } else {
-                Default::default()
-            };
-            let position = &mut transform.translation;
-            let out_of_right = position.x - size.x > projection.right;
-            let out_of_left = position.x + size.x < projection.left;
-            let out_of_top = position.y - size.y > projection.top;
-            let out_of_bottom = position.y + size.y < projection.bottom;
+        let screen_rect = Area::from_projection(projection);
+        for (entity, texture_atlas, transform, sprite) in query.iter_mut() {
+            if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
+                if Area::from_position_atlas(
+                    transform.translation.truncate(),
+                    texture_atlas,
+                    sprite.index as usize,
+                )
+                .outside(&screen_rect)
+                {
+                    commands.entity(entity).despawn();
+                }
+            }
+        }
+    }
+}
 
-            if out_of_right || out_of_left || out_of_top || out_of_bottom {
-                commands.entity(entity).despawn();
+struct DistanceFromScreen(f32);
+
+/// Edge case for a specific subset of sprite entities:
+/// - Are `Wrap` but not `Wrapped` yet
+/// - Are outside of the screen
+/// - Move further from the screen
+/// The latter condition is check by tagging the suspected entity with a
+/// `DistanceFromScreen` component which stored the distance between the entity
+/// and the screen.
+/// At second iteration, if the new distance if larger than the one in the tag,
+/// we must make an action.
+///
+/// Current action is despawn.
+fn teleport_wrap_non_wrapped_sprite_atlas(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    query: Query<
+        (
+            Entity,
+            &Handle<TextureAtlas>,
+            &Transform,
+            &TextureAtlasSprite,
+            Option<&DistanceFromScreen>,
+        ),
+        (With<Wrap>, Without<Ghost>, Without<Wrapped>),
+    >,
+) {
+    for projection in q_projection.iter() {
+        let screen_rect = Area::from_projection(projection);
+        for (entity, texture_atlas, transform, sprite, last_distance) in query.iter() {
+            let position = transform.translation.truncate();
+
+            if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
+                if Area::from_position_atlas(position, texture_atlas, sprite.index as usize)
+                    .outside(&Area::from_projection(projection))
+                {
+                    let distance = screen_rect.distance_squared(position);
+                    if let Some(last_distance) = last_distance {
+                        if distance >= last_distance.0 {
+                            commands.entity(entity).despawn();
+                        }
+                    } else {
+                        commands.entity(entity).insert(DistanceFromScreen(distance));
+                    }
+                } else {
+                    commands.entity(entity).remove::<DistanceFromScreen>();
+                }
+            }
+        }
+    }
+}
+
+/// Edge case for a specific subset of sprite entities:
+/// - Are `Wrap` but not `Wrapped` yet
+/// - Are outside of the screen
+/// - Move further from the screen
+/// The latter condition is checked by tagging the suspected entity with a
+/// `DistanceFromScreen` component which stores the distance between the entity
+/// and the screen.
+/// On second iteration, if the new distance is larger than the one in the tag,
+/// we must make an action.
+///
+/// Current action is despawn.
+fn teleport_wrap_non_wrapped_sprite(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    query: Query<
+        (Entity, &Transform, &Sprite, Option<&DistanceFromScreen>),
+        (With<Wrap>, Without<Ghost>, Without<Wrapped>),
+    >,
+) {
+    for projection in q_projection.iter() {
+        let screen_rect = Area::from_projection(projection);
+        for (entity, transform, sprite, last_distance) in query.iter() {
+            let position = transform.translation.truncate();
+            if Area::new(position, sprite.size).outside(&screen_rect) {
+                let distance = screen_rect.distance_squared(position);
+                if let Some(last_distance) = last_distance {
+                    if distance >= last_distance.0 {
+                        commands.entity(entity).despawn();
+                    }
+                } else {
+                    commands.entity(entity).insert(DistanceFromScreen(distance));
+                }
+            } else {
+                commands.entity(entity).remove::<DistanceFromScreen>();
             }
         }
     }
@@ -496,6 +640,16 @@ pub struct WrapPlugin;
 impl Plugin for WrapPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system(teleport_wrapped.system().label(Label::Teleport))
+            .add_system(
+                teleport_wrap_non_wrapped_sprite
+                    .system()
+                    .label(Label::Teleport),
+            )
+            .add_system(
+                teleport_wrap_non_wrapped_sprite_atlas
+                    .system()
+                    .label(Label::Teleport),
+            )
             .add_system(
                 spawn_ghosts_sprite
                     .system()

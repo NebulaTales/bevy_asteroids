@@ -4,19 +4,20 @@ use crate::{
 };
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
-    asset::Assets,
+    asset::{Assets, Handle},
     core::{Time, Timer},
     ecs::{
         entity::Entity,
         query::With,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
-    math::{Vec2, Vec3},
+    math::Vec2,
     render::color::Color,
     sprite::Sprite,
     sprite::{entity::SpriteBundle, ColorMaterial},
     transform::components::Transform,
 };
+use rand::prelude::*;
 use std::time::Duration;
 
 pub struct Firing {
@@ -31,37 +32,13 @@ impl Default for Firing {
     }
 }
 
-const BULLET_SIZE: f32 = 3.0;
 const FLOOR_SPEED: f32 = 200.0;
 const INITIAL_SPEED: f32 = 400.0;
-const PEW_PEW_SPEED: u64 = 1;
+const PEW_PEW_SPEED: u64 = 0;
+const PEW_PEW_SIZE: f32 = 3.0;
 
 struct Fire;
-
-fn spawn_single(
-    commands: &mut Commands,
-    materials: &mut Assets<ColorMaterial>,
-    position: Vec3,
-    velocity: Vec2,
-) {
-    let size = Vec2::new(BULLET_SIZE, BULLET_SIZE);
-    commands
-        .spawn_bundle(SpriteBundle {
-            material: materials.add(Color::rgb(1.0, 0.5, 0.5).into()),
-            transform: Transform::from_translation(position),
-            sprite: Sprite::new(size),
-            ..Default::default()
-        })
-        .insert(Velocity::new(velocity, 0.0))
-        .insert(Wrap::from_count(1))
-        .insert(Collider2D {
-            shape: Shape2D::Rectangle(size),
-            ..Default::default()
-        })
-        .insert(Fire)
-        .insert(CollisionLayer(AMMO))
-        .insert(CollisionMask(OBSTACLE));
-}
+pub struct FireColors(Vec<Handle<ColorMaterial>>);
 
 fn destroy_on_collision(
     mut commands: Commands,
@@ -78,7 +55,7 @@ fn destroy_on_collision(
 pub fn spawn_fire(
     mut commands: Commands,
     time: Res<Time>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    colors: Res<FireColors>,
     mut query: Query<(
         &mut Firing,
         Option<&Transform>,
@@ -86,7 +63,6 @@ pub fn spawn_fire(
         Option<&FireAngleError>,
     )>,
 ) {
-    use rand::prelude::*;
     let mut rng = thread_rng();
 
     for (mut spawner, spawner_transform, spawner_velocity, angle_error) in query.iter_mut() {
@@ -125,16 +101,44 @@ pub fn spawn_fire(
 
             let position = transform.translation;
 
-            spawn_single(&mut commands, &mut materials, position, velocity);
+            let size = Vec2::new(PEW_PEW_SIZE, PEW_PEW_SIZE);
+            commands
+                .spawn_bundle(SpriteBundle {
+                    material: colors.0[rng.gen_range(0..colors.0.len())].clone(),
+                    transform: Transform::from_translation(position),
+                    sprite: Sprite::new(size),
+                    ..Default::default()
+                })
+                .insert(Velocity::new(velocity, 0.0))
+                .insert(Wrap::from_count(1))
+                .insert(Collider2D {
+                    shape: Shape2D::Rectangle(size),
+                    ..Default::default()
+                })
+                .insert(Fire)
+                .insert(CollisionLayer(AMMO))
+                .insert(CollisionMask(OBSTACLE));
         }
     }
+}
+
+fn startup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+    // Added the palette of fire colors
+    commands.insert_resource(FireColors(vec![
+        materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.35, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.60, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.81, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.91, 0.03).into()),
+    ]));
 }
 
 pub struct FirePlugin;
 
 impl Plugin for FirePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(spawn_fire.system())
+        app.add_startup_system(startup.system())
+            .add_system(spawn_fire.system())
             .add_system(destroy_on_collision.system());
     }
 }

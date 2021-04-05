@@ -183,7 +183,7 @@ fn key_spawner(
     keyboard: Res<Input<KeyCode>>,
     spawn_info: Res<SpawnerInfo>,
 ) {
-    if keyboard.just_pressed(KeyCode::S) {
+    if keyboard.pressed(KeyCode::S) {
         spawn_radius(
             1,
             &mut commands,
@@ -197,6 +197,17 @@ fn key_spawner(
                 center: Default::default(),
                 radius: Vec2::new(100.0, 100.0),
             },
+        );
+    }
+
+    if keyboard.just_pressed(KeyCode::D) {
+        spawn_single(
+            &mut commands,
+            &spawn_info,
+            Asteroid::Big,
+            Vec2::new(280.0, 0.0),
+            Vec2::new(10.0, 0.0),
+            0.0,
         );
     }
 }
