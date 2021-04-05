@@ -13,6 +13,7 @@ use bevy::{
     },
     input::{keyboard::KeyCode, Input},
     math::{Vec2, Vec3},
+    render::camera::OrthographicProjection,
     sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
     transform::components::Transform,
 };
@@ -26,7 +27,7 @@ enum Asteroid {
 
 fn spawn_single(
     commands: &mut Commands,
-    spawn_info: &SpawnerInfo,
+    texture_atlas: &AsteroidTexture,
     asteroid: Asteroid,
     position: Vec2,
     velocity: Vec2,
@@ -44,7 +45,7 @@ fn spawn_single(
 
     let mut e = commands.spawn();
     e.insert_bundle(SpriteSheetBundle {
-        texture_atlas: spawn_info.texture.clone(),
+        texture_atlas: texture_atlas.0.clone(),
         transform,
         sprite: TextureAtlasSprite {
             index: rng.gen_range(0..4),
@@ -97,7 +98,7 @@ impl SpawnArea {
 fn spawn_radius(
     number: u16,
     commands: &mut Commands,
-    spawn_info: &SpawnerInfo,
+    texture_atlas: &AsteroidTexture,
     asteroid: Asteroid,
     position: SpawnArea,
     direction: SpawnArea,
@@ -110,7 +111,7 @@ fn spawn_radius(
 
         spawn_single(
             commands,
-            &spawn_info,
+            &texture_atlas,
             asteroid,
             spawn_position,
             direction,
@@ -123,7 +124,7 @@ fn spawn_radius(
 fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
-    spawn_info: Res<SpawnerInfo>,
+    spawn_info: Res<AsteroidTexture>,
     q_asteroids: Query<(Entity, &Asteroid, &Transform, Option<&Velocity>)>,
     q_collides_with: Query<(&Transform, Option<&Velocity>)>,
 ) {
@@ -177,46 +178,43 @@ fn destroy_on_collision(
     }
 }
 
-// TODO radius should be based on screen
 fn key_spawner(
     mut commands: Commands,
+    q_projection: Query<&OrthographicProjection>,
     keyboard: Res<Input<KeyCode>>,
-    spawn_info: Res<SpawnerInfo>,
+    texture_atlas: Res<AsteroidTexture>,
 ) {
-    if keyboard.pressed(KeyCode::S) {
-        spawn_radius(
-            1,
-            &mut commands,
-            &spawn_info,
-            Asteroid::Big,
-            SpawnArea {
-                center: Default::default(),
-                radius: Vec2::new(600.0, 600.0),
-            },
-            SpawnArea {
-                center: Default::default(),
-                radius: Vec2::new(100.0, 100.0),
-            },
-        );
-    }
+    if keyboard.just_pressed(KeyCode::S) {
+        for projection in q_projection.iter() {
+            let (radius, target) = {
+                let screen_size = Vec2::new(
+                    projection.right - projection.left,
+                    projection.top - projection.bottom,
+                );
+                (screen_size * 1.5, screen_size / 1.5)
+            };
 
-    if keyboard.just_pressed(KeyCode::D) {
-        spawn_single(
-            &mut commands,
-            &spawn_info,
-            Asteroid::Big,
-            Vec2::new(280.0, 0.0),
-            Vec2::new(10.0, 0.0),
-            0.0,
-        );
+            spawn_radius(
+                1,
+                &mut commands,
+                &texture_atlas,
+                Asteroid::Big,
+                SpawnArea {
+                    center: Default::default(),
+                    radius,
+                },
+                SpawnArea {
+                    center: Default::default(),
+                    radius: target,
+                },
+            );
+        }
     }
 }
 
 pub struct RulesPlugin;
 
-struct SpawnerInfo {
-    pub texture: Handle<TextureAtlas>,
-}
+struct AsteroidTexture(Handle<TextureAtlas>);
 
 fn startup(
     mut commands: Commands,
@@ -226,9 +224,7 @@ fn startup(
     let texture_handle = asset_server.load("sprites/asteroids.png");
     let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 1, 4);
 
-    commands.insert_resource(SpawnerInfo {
-        texture: texture_atlases.add(texture_atlas),
-    });
+    commands.insert_resource(AsteroidTexture(texture_atlases.add(texture_atlas)));
 }
 
 impl Plugin for RulesPlugin {
