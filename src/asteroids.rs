@@ -7,11 +7,11 @@ use rand::prelude::*;
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
     asset::{AssetServer, Assets, Handle},
+    core::{Time, Timer},
     ecs::{
         entity::Entity,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
-    input::{keyboard::KeyCode, Input},
     math::{Vec2, Vec3},
     render::camera::OrthographicProjection,
     sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
@@ -25,46 +25,9 @@ enum Asteroid {
     Tiny,
 }
 
-fn spawn_single(
-    commands: &mut Commands,
-    texture_atlas: &AsteroidTexture,
-    asteroid: Asteroid,
-    position: Vec2,
-    velocity: Vec2,
-    spin: f32,
-) {
-    let mut rng = thread_rng();
-    let scale = match asteroid {
-        Asteroid::Big => 1.0,
-        Asteroid::Small => 0.5,
-        Asteroid::Tiny => 0.25,
-    };
-
-    let transform = Transform::from_translation(Vec3::new(position.x, position.y, 10.0))
-        * Transform::from_scale(Vec3::new(scale, scale, 1.0));
-
-    let mut e = commands.spawn();
-    e.insert_bundle(SpriteSheetBundle {
-        texture_atlas: texture_atlas.0.clone(),
-        transform,
-        sprite: TextureAtlasSprite {
-            index: rng.gen_range(0..4),
-            ..Default::default()
-        },
-        ..Default::default()
-    })
-    .insert(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
-    .insert(Collider2D {
-        shape: Shape2D::Circle(32.0 * scale),
-        ..Default::default()
-    })
-    .insert(CollisionLayer(OBSTACLE))
-    .insert(CollisionMask(PLAYER | AMMO))
-    .insert(asteroid);
-
-    if asteroid != Asteroid::Tiny {
-        e.insert(Wrap::default());
-    }
+struct Spawner {
+    texture_atlas: Handle<TextureAtlas>,
+    timer: Timer,
 }
 
 #[derive(Copy, Clone)]
@@ -95,10 +58,52 @@ impl SpawnArea {
     }
 }
 
+fn spawn_single(
+    commands: &mut Commands,
+    texture_atlas: Handle<TextureAtlas>,
+    asteroid: Asteroid,
+    position: Vec2,
+    velocity: Vec2,
+    spin: f32,
+) {
+    let mut rng = thread_rng();
+    let scale = match asteroid {
+        Asteroid::Big => 1.0,
+        Asteroid::Small => 0.5,
+        Asteroid::Tiny => 0.25,
+    };
+
+    let transform = Transform::from_translation(Vec3::new(position.x, position.y, 10.0))
+        * Transform::from_scale(Vec3::new(scale, scale, 1.0));
+
+    let mut e = commands.spawn();
+    e.insert_bundle(SpriteSheetBundle {
+        texture_atlas: texture_atlas.clone(),
+        transform,
+        sprite: TextureAtlasSprite {
+            index: rng.gen_range(0..4),
+            ..Default::default()
+        },
+        ..Default::default()
+    })
+    .insert(Velocity::new(Vec2::new(velocity.x, velocity.y), spin))
+    .insert(Collider2D {
+        shape: Shape2D::Circle(32.0 * scale),
+        ..Default::default()
+    })
+    .insert(CollisionLayer(OBSTACLE))
+    .insert(CollisionMask(PLAYER | AMMO))
+    .insert(asteroid);
+
+    if asteroid != Asteroid::Tiny {
+        e.insert(Wrap::default());
+    }
+}
+
 fn spawn_radius(
     number: u16,
     commands: &mut Commands,
-    texture_atlas: &AsteroidTexture,
+    texture_atlas: Handle<TextureAtlas>,
     asteroid: Asteroid,
     position: SpawnArea,
     direction: SpawnArea,
@@ -111,7 +116,7 @@ fn spawn_radius(
 
         spawn_single(
             commands,
-            &texture_atlas,
+            texture_atlas.clone(),
             asteroid,
             spawn_position,
             direction,
@@ -120,11 +125,43 @@ fn spawn_radius(
     }
 }
 
-// prints events as they come in
+fn spawn_asteroids(
+    mut commands: Commands,
+    time: Res<Time>,
+    q_projection: Query<&OrthographicProjection>,
+    mut spawner: ResMut<Spawner>,
+) {
+    if spawner.timer.tick(time.delta()).just_finished() {
+        for projection in q_projection.iter() {
+            let radius = Vec2::new(
+                projection.right - projection.left,
+                projection.top - projection.bottom,
+            );
+
+            spawn_radius(
+                1,
+                &mut commands,
+                spawner.texture_atlas.clone(),
+                Asteroid::Big,
+                SpawnArea {
+                    center: Default::default(),
+                    radius,
+                },
+                SpawnArea {
+                    center: Default::default(),
+                    radius: Vec2::new(0.0, 0.0),
+                },
+            );
+        }
+    }
+}
+
+/// On collision, an asteroid will despawn and, in place smaller asteroids will
+/// spawn.
 fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
-    spawn_info: Res<AsteroidTexture>,
+    spawner: Res<Spawner>,
     q_asteroids: Query<(Entity, &Asteroid, &Transform, Option<&Velocity>)>,
     q_collides_with: Query<(&Transform, Option<&Velocity>)>,
 ) {
@@ -172,65 +209,45 @@ fn destroy_on_collision(
                     center: p,
                     radius: Vec2::new(100.0, 100.0),
                 };
-                spawn_radius(3, &mut commands, &spawn_info, asteroid, position, direction);
-            }
-        }
-    }
-}
-
-fn key_spawner(
-    mut commands: Commands,
-    q_projection: Query<&OrthographicProjection>,
-    keyboard: Res<Input<KeyCode>>,
-    texture_atlas: Res<AsteroidTexture>,
-) {
-    if keyboard.just_pressed(KeyCode::S) {
-        for projection in q_projection.iter() {
-            let (radius, target) = {
-                let screen_size = Vec2::new(
-                    projection.right - projection.left,
-                    projection.top - projection.bottom,
+                spawn_radius(
+                    3,
+                    &mut commands,
+                    spawner.texture_atlas.clone(),
+                    asteroid,
+                    position,
+                    direction,
                 );
-                (screen_size * 1.5, screen_size / 1.5)
-            };
-
-            spawn_radius(
-                1,
-                &mut commands,
-                &texture_atlas,
-                Asteroid::Big,
-                SpawnArea {
-                    center: Default::default(),
-                    radius,
-                },
-                SpawnArea {
-                    center: Default::default(),
-                    radius: target,
-                },
-            );
+            }
         }
     }
 }
 
 pub struct RulesPlugin;
 
-struct AsteroidTexture(Handle<TextureAtlas>);
-
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let texture_handle = asset_server.load("sprites/asteroids.png");
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 1, 4);
+    let texture_atlas = texture_atlases.add(TextureAtlas::from_grid(
+        asset_server.load("sprites/asteroids.png"),
+        Vec2::new(64.0, 64.0),
+        1,
+        4,
+    ));
 
-    commands.insert_resource(AsteroidTexture(texture_atlases.add(texture_atlas)));
+    let timer = Timer::from_seconds(1.0, true);
+
+    commands.insert_resource(Spawner {
+        texture_atlas,
+        timer,
+    });
 }
 
 impl Plugin for RulesPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
-            .add_system(key_spawner.system())
+            .add_system(spawn_asteroids.system())
             .add_system(destroy_on_collision.system());
     }
 }
