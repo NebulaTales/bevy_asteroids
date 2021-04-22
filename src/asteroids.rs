@@ -12,6 +12,7 @@ use bevy::{
         entity::Entity,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
+    input::{keyboard::KeyCode, Input},
     math::{Vec2, Vec3},
     render::camera::OrthographicProjection,
     sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
@@ -127,12 +128,15 @@ fn spawn_radius(
 
 fn spawn_asteroids(
     mut commands: Commands,
-    time: Res<Time>,
+    _time: Res<Time>,
     q_projection: Query<&OrthographicProjection>,
-    mut spawner: ResMut<Spawner>,
+    keyboard: Res<Input<KeyCode>>,
+    spawner: ResMut<Spawner>,
 ) {
-    if spawner.timer.tick(time.delta()).just_finished() {
-        for projection in q_projection.iter() {
+    //let _ticked = spawner.timer.tick(time.delta()).just_finished();
+
+    if keyboard.just_pressed(KeyCode::S) {
+        if let Ok(projection) = q_projection.single() {
             let radius = Vec2::new(
                 projection.right - projection.left,
                 projection.top - projection.bottom,

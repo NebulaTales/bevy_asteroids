@@ -185,7 +185,7 @@ pub fn spawn_ghosts_sprite(
         Without<Wrapped>,
     >,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(&projection);
 
         for (entity, mut wrap, material, transform, sprite, collision_mask, layer_mask) in
@@ -244,7 +244,7 @@ pub fn spawn_ghosts_sprite_atlas(
         Without<Wrapped>,
     >,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(&projection);
 
         for (
@@ -327,7 +327,7 @@ fn despawn_ghosts_direct_sprite(
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     query: Query<(Entity, &Wrapped, &Transform, &Sprite), Without<Wrap>>,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(projection);
 
         for (entity, wrapped, transform, sprite) in query.iter() {
@@ -360,7 +360,7 @@ fn despawn_ghosts_direct_sprite_atlas(
         Without<Wrap>,
     >,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(projection);
 
         for (entity, wrapped, transform, texture_atlas, sprite) in query.iter() {
@@ -394,7 +394,7 @@ fn despawn_unwrapped_sprite(
         (Without<Wrap>, Without<Wrapped>, Without<Ghost>),
     >,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(projection);
         for (entity, sprite, transform) in query.iter_mut() {
             let sprite_rect = Area::new(transform.translation.truncate(), sprite.size);
@@ -420,7 +420,7 @@ fn despawn_unwrapped_sprite_atlas(
         (Without<Wrap>, Without<Wrapped>, Without<Ghost>),
     >,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(projection);
         for (entity, texture_atlas, transform, sprite) in query.iter_mut() {
             if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
@@ -466,7 +466,7 @@ fn teleport_wrap_non_wrapped_sprite_atlas(
         (With<Wrap>, Without<Ghost>, Without<Wrapped>),
     >,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(projection);
         for (entity, texture_atlas, transform, sprite, last_distance) in query.iter() {
             let position = transform.translation.truncate();
@@ -510,7 +510,7 @@ fn teleport_wrap_non_wrapped_sprite(
         (With<Wrap>, Without<Ghost>, Without<Wrapped>),
     >,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(projection);
         for (entity, transform, sprite, last_distance) in query.iter() {
             let position = transform.translation.truncate();
@@ -536,7 +536,7 @@ fn teleport_wrapped(
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     mut query: Query<(&mut Transform, Option<&mut Wrap>), (Without<Ghost>, With<Wrapped>)>,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let h_warp = projection.right - projection.left;
         let v_warp = projection.top - projection.bottom;
 
@@ -591,7 +591,7 @@ fn set_ghosts_shift(
     q_targets: Query<(Entity, &Transform)>,
     mut q_ghosts: Query<&mut Ghost>,
 ) {
-    for projection in q_projection.iter() {
+    if let Ok(projection) = q_projection.single() {
         let center = Vec2::new(
             (projection.top + projection.bottom) / 2.0,
             (projection.right + projection.left) / 2.0,
