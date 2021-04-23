@@ -53,7 +53,7 @@ fn spawn_player(
                 .insert_bundle(SpriteSheetBundle {
                     texture_atlas: texture_atlas.0.clone(),
                     sprite: TextureAtlasSprite {
-                        index: 0,
+                        index: 6,
                         ..Default::default()
                     },
                     ..Default::default()
@@ -84,7 +84,7 @@ pub fn startup(
     commands.insert_resource(SpawnTexture(texture_atlases.add(TextureAtlas::from_grid(
         asset_server.load("sprites/ship.png"),
         Vec2::new(64.0, 64.0),
-        2,
+        7,
         1,
     ))));
 
