@@ -1,6 +1,6 @@
 use crate::{
     movement::{Acceleration, Thrust},
-    utils, Firing, Wrap,
+    Firing, Wrap,
 };
 use bevy::{
     app::{AppBuilder, Plugin},
@@ -75,7 +75,6 @@ impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system(thrust.system())
             .add_system(fire.system())
-            .add_system(debug.system())
-            .add_system(utils::delayed_add::<PlayerControlled>.system());
+            .add_system(debug.system());
     }
 }

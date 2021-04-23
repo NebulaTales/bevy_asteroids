@@ -11,7 +11,6 @@ mod controls;
 mod fire;
 mod movement;
 mod player;
-mod utils;
 mod wrap;
 
 pub use asteroids::RulesPlugin;
@@ -20,7 +19,6 @@ pub use controls::{ControlsPlugin, PlayerControlled};
 pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
 pub use player::PlayerPlugin;
-pub use utils::DelayedAdd;
 pub use wrap::{Ghost, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
 pub struct AsteroidPlugins;

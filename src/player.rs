@@ -1,6 +1,6 @@
 use crate::{
-    Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, DelayedAdd,
-    FireAngleError, Friction, PlayerControlled, Shape2D, Thrust, Velocity, Wrap, OBSTACLE, PLAYER,
+    Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, FireAngleError,
+    Friction, PlayerControlled, Shape2D, Thrust, Velocity, Wrap, OBSTACLE, PLAYER,
 };
 
 use bevy::{
@@ -12,9 +12,7 @@ use bevy::{
         query::With,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
-    math::Vec3,
     sprite::{entity::SpriteBundle, ColorMaterial},
-    transform::components::Transform,
 };
 
 pub struct Player;
@@ -55,17 +53,13 @@ pub fn spawn_player(
                 .remove::<SpawnPlayer>()
                 .insert_bundle(SpriteBundle {
                     material: player_material.0.clone(),
-                    transform: Transform::from_translation(Vec3::new(0.0, -300.0, 0.0)),
                     ..Default::default()
                 })
-                .insert(Velocity::with_translation(0.0, 200.0))
+                .insert(Velocity::default())
                 .insert(Acceleration::default())
                 .insert(Thrust::default())
                 .insert(Friction(1.0))
-                .insert(DelayedAdd(
-                    PlayerControlled,
-                    Timer::from_seconds(2.0, false),
-                ))
+                .insert(PlayerControlled)
                 .insert(Collider2D {
                     shape: Shape2D::Circle(32.0),
                     ..Default::default()
