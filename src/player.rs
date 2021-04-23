@@ -12,10 +12,13 @@ use bevy::{
         query::With,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
-    sprite::{entity::SpriteBundle, ColorMaterial},
+    math::Vec2,
+    sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
 };
 
 pub struct Player;
+pub struct SpawnPlayer(Timer);
+struct SpawnTexture(Handle<TextureAtlas>);
 
 pub fn destroy_on_collision(
     mut commands: Commands,
@@ -30,20 +33,16 @@ pub fn destroy_on_collision(
     }
 }
 
-pub struct SpawnPlayer(Timer);
-
 impl Default for SpawnPlayer {
     fn default() -> Self {
         SpawnPlayer(Timer::from_seconds(3.0, false))
     }
 }
 
-pub struct PlayerMaterial(Handle<ColorMaterial>);
-
-pub fn spawn_player(
+fn spawn_player(
     mut commands: Commands,
     time: Res<Time>,
-    player_material: Res<PlayerMaterial>,
+    texture_atlas: Res<SpawnTexture>,
     mut q_spawn: Query<(Entity, &mut SpawnPlayer)>,
 ) {
     for (entity, mut spawn) in q_spawn.iter_mut() {
@@ -51,8 +50,12 @@ pub fn spawn_player(
             commands
                 .entity(entity)
                 .remove::<SpawnPlayer>()
-                .insert_bundle(SpriteBundle {
-                    material: player_material.0.clone(),
+                .insert_bundle(SpriteSheetBundle {
+                    texture_atlas: texture_atlas.0.clone(),
+                    sprite: TextureAtlasSprite {
+                        index: 0,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 })
                 .insert(Velocity::default())
@@ -76,12 +79,15 @@ pub fn spawn_player(
 pub fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let ship_handle = asset_server.load("sprites/ship.png");
+    commands.insert_resource(SpawnTexture(texture_atlases.add(TextureAtlas::from_grid(
+        asset_server.load("sprites/ship.png"),
+        Vec2::new(64.0, 64.0),
+        2,
+        1,
+    ))));
 
-    let player_material = materials.add(ship_handle.into());
-    commands.insert_resource(PlayerMaterial(player_material.clone()));
     commands.spawn().insert(SpawnPlayer::default());
 }
 
