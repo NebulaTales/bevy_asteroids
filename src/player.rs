@@ -1,6 +1,6 @@
 use crate::{
     Acceleration, Collider2D, CollisionLayer, CollisionMask, DelayedAdd, FireAngleError, Friction,
-    PlayerControlled, Shape2D, Thrust, Velocity, Wrap, WrapCamera, OBSTACLE, PLAYER,
+    PlayerControlled, Shape2D, Thrust, Velocity, Wrap, OBSTACLE, PLAYER,
 };
 
 use bevy::{
@@ -9,12 +9,11 @@ use bevy::{
     core::Timer,
     ecs::system::{Commands, IntoSystem, Res, ResMut},
     math::Vec3,
-    render::entity::OrthographicCameraBundle,
     sprite::{entity::SpriteBundle, ColorMaterial},
     transform::components::Transform,
 };
 
-pub fn player(
+pub fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -45,17 +44,10 @@ pub fn player(
         .insert(FireAngleError(0.03));
 }
 
-pub fn game(mut commands: Commands) {
-    commands
-        .spawn_bundle(OrthographicCameraBundle::new_2d())
-        .insert(WrapCamera);
-}
+pub struct PlayerPlugin;
 
-pub struct StartupPlugin;
-
-impl Plugin for StartupPlugin {
+impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(player.system())
-            .add_startup_system(game.system());
+        app.add_startup_system(startup.system());
     }
 }

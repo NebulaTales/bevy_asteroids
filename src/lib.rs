@@ -1,6 +1,8 @@
 use bevy::{
-    app::{PluginGroup, PluginGroupBuilder},
+    app::{AppBuilder, Plugin, PluginGroup, PluginGroupBuilder},
+    ecs::system::{Commands, IntoSystem},
     math::Vec2,
+    render::entity::OrthographicCameraBundle,
 };
 
 mod asteroids;
@@ -8,7 +10,7 @@ mod collision;
 mod controls;
 mod fire;
 mod movement;
-mod startup;
+mod player;
 mod utils;
 mod wrap;
 
@@ -17,7 +19,7 @@ pub use collision::{Collider2D, CollisionEvent, CollisionLayer, CollisionMask, C
 pub use controls::{ControlsPlugin, PlayerControlled};
 pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
-pub use startup::StartupPlugin;
+pub use player::PlayerPlugin;
 pub use utils::DelayedAdd;
 pub use wrap::{Ghost, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
@@ -38,14 +40,29 @@ impl Default for Shape2D {
     }
 }
 
+struct BasePlugin;
+
+pub fn game(mut commands: Commands) {
+    commands
+        .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert(WrapCamera);
+}
+
+impl Plugin for BasePlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_startup_system(game.system());
+    }
+}
+
 impl PluginGroup for AsteroidPlugins {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
+        group.add(BasePlugin);
         group.add(CollisionPlugin);
         group.add(ControlsPlugin);
         group.add(FirePlugin);
         group.add(MovementPlugin);
         group.add(RulesPlugin);
-        group.add(StartupPlugin);
+        group.add(PlayerPlugin);
         group.add(WrapPlugin);
     }
 }
