@@ -3,6 +3,7 @@ use crate::{
     OBSTACLE, PLAYER,
 };
 use rand::prelude::*;
+use std::time::Duration;
 
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
@@ -19,7 +20,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum Asteroid {
     Big,
     Small,
@@ -29,6 +30,7 @@ enum Asteroid {
 struct SpawnTexture(Handle<TextureAtlas>);
 struct SpawnTimer(Timer);
 
+#[derive(Debug)]
 struct Spawn {
     asteroid: Asteroid,
     position: Vec2,
@@ -82,6 +84,7 @@ fn spawn(
     }
 }
 
+#[derive(Debug)]
 struct SpawnRadius {
     asteroid: Asteroid,
     origin: (Vec2, Size<f32>),
@@ -130,7 +133,11 @@ fn timed_spawn(
     q_projection: Query<&OrthographicProjection>,
     mut timer: ResMut<SpawnTimer>,
 ) {
+    let mut rng = thread_rng();
     if timer.0.tick(time.delta()).just_finished() {
+        timer
+            .0
+            .set_duration(Duration::from_secs(rng.gen_range(1..15)));
         if let Ok(projection) = q_projection.single() {
             let diameter = Size::new(
                 projection.right - projection.left,
@@ -140,7 +147,7 @@ fn timed_spawn(
             commands.spawn().insert(SpawnRadius {
                 asteroid: Asteroid::Big,
                 origin: (Default::default(), diameter),
-                direction: (Default::default(), Size::default()),
+                direction: (Default::default(), diameter / 2.0),
             });
         }
     }
@@ -216,7 +223,7 @@ fn startup(
         4,
     ))));
 
-    commands.insert_resource(SpawnTimer(Timer::from_seconds(5.0, true)));
+    commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true)));
 }
 
 impl Plugin for RulesPlugin {

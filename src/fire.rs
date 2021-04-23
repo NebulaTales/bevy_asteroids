@@ -34,7 +34,7 @@ impl Default for Firing {
 
 const FLOOR_SPEED: f32 = 200.0;
 const INITIAL_SPEED: f32 = 400.0;
-const PEW_PEW_SPEED: u64 = 0;
+const PEW_PEW_SPEED: u64 = 300;
 const PEW_PEW_SIZE: f32 = 3.0;
 
 struct Fire;
