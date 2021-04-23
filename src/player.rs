@@ -1,6 +1,6 @@
 use crate::{
-    Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, FireAngleError,
-    Friction, PlayerControlled, Shape2D, Thrust, Velocity, Wrap, OBSTACLE, PLAYER,
+    Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, ControlLocked,
+    FireAngleError, Friction, PlayerControlled, Shape2D, Thrust, Velocity, Wrap, OBSTACLE, PLAYER,
 };
 
 use bevy::{
@@ -9,18 +9,25 @@ use bevy::{
     core::{Time, Timer},
     ecs::{
         entity::Entity,
-        query::With,
+        query::{Added, With},
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     math::Vec2,
     sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
 };
 
-pub struct Player;
-pub struct SpawnPlayer(Timer);
+struct Player;
+struct SpawnPlayer(Timer);
 struct SpawnTexture(Handle<TextureAtlas>);
+struct Immunity {
+    duration: Timer,
+    animation: Timer,
+}
 
-pub fn destroy_on_collision(
+const SPRITE_FULL_SHIELD: u32 = 11;
+const SPRITE_NO_SHIELD: u32 = 12;
+
+fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
     q_player: Query<Entity, With<Player>>,
@@ -39,6 +46,58 @@ impl Default for SpawnPlayer {
     }
 }
 
+impl Default for Immunity {
+    fn default() -> Self {
+        Immunity {
+            duration: Timer::from_seconds(3.0, false),
+            animation: Timer::from_seconds(0.1, true),
+        }
+    }
+}
+
+// Immunity system
+// Any ship that with immunity checks for a timer
+// When timer is finished, immunity is removed.
+// Control is also given to the player
+fn remove_immunity(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut TextureAtlasSprite, &mut Immunity), With<Player>>,
+) {
+    for (id, mut sprite, mut immunity) in query.iter_mut() {
+        if immunity.animation.tick(time.delta()).just_finished() {
+            if sprite.index < SPRITE_FULL_SHIELD {
+                sprite.index += 1;
+            }
+        }
+
+        if immunity.duration.tick(time.delta()).just_finished() {
+            sprite.index = SPRITE_NO_SHIELD;
+            commands
+                .entity(id)
+                .remove::<Immunity>()
+                .remove::<ControlLocked>()
+                .insert(CollisionMask(OBSTACLE));
+        }
+    }
+}
+
+fn new_immunity(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut TextureAtlasSprite), (With<Player>, Added<Immunity>)>,
+) {
+    for (e, mut sprite) in query.iter_mut() {
+        if sprite.index > SPRITE_FULL_SHIELD {
+            sprite.index = SPRITE_FULL_SHIELD;
+        }
+
+        commands
+            .entity(e)
+            .remove::<CollisionMask>()
+            .insert(ControlLocked);
+    }
+}
+
 fn spawn_player(
     mut commands: Commands,
     time: Res<Time>,
@@ -52,10 +111,6 @@ fn spawn_player(
                 .remove::<SpawnPlayer>()
                 .insert_bundle(SpriteSheetBundle {
                     texture_atlas: texture_atlas.0.clone(),
-                    sprite: TextureAtlasSprite {
-                        index: 6,
-                        ..Default::default()
-                    },
                     ..Default::default()
                 })
                 .insert(Velocity::default())
@@ -68,10 +123,10 @@ fn spawn_player(
                     ..Default::default()
                 })
                 .insert(CollisionLayer(PLAYER))
-                .insert(CollisionMask(OBSTACLE))
                 .insert(Wrap::default())
                 .insert(Player)
-                .insert(FireAngleError(0.03));
+                .insert(FireAngleError(0.03))
+                .insert(Immunity::default());
         }
     }
 }
@@ -84,7 +139,7 @@ pub fn startup(
     commands.insert_resource(SpawnTexture(texture_atlases.add(TextureAtlas::from_grid(
         asset_server.load("sprites/ship.png"),
         Vec2::new(64.0, 64.0),
-        7,
+        13,
         1,
     ))));
 
@@ -97,6 +152,8 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
             .add_system(spawn_player.system())
+            .add_system(remove_immunity.system())
+            .add_system(new_immunity.system())
             .add_system(destroy_on_collision.system());
     }
 }

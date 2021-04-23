@@ -6,7 +6,7 @@ use bevy::{
     app::{AppBuilder, Plugin},
     ecs::{
         entity::Entity,
-        query::With,
+        query::{With, Without},
         system::{Commands, IntoSystem, Query, Res},
     },
     input::{keyboard::KeyCode, Input},
@@ -14,22 +14,39 @@ use bevy::{
 
 #[derive(Copy, Clone)]
 pub struct PlayerControlled;
+pub struct ControlLocked;
 
 /// The thrust system adds creates the acceleration using keyboard inputs
-pub fn thrust(
+pub fn thrust_up_down(
+    keyboard: Res<Input<KeyCode>>,
+    mut query: Query<
+        (&Thrust, &mut Acceleration),
+        (With<PlayerControlled>, Without<ControlLocked>),
+    >,
+) {
+    for (thrust, mut acceleration) in query.iter_mut() {
+        acceleration.forward = if keyboard.pressed(KeyCode::Up) {
+            thrust.forward
+        } else {
+            0.0
+        } - if keyboard.pressed(KeyCode::Down) {
+            thrust.backward
+        } else {
+            0.0
+        }
+    }
+}
+
+pub fn thrust_left_right(
     keyboard: Res<Input<KeyCode>>,
     mut query: Query<(&Thrust, &mut Acceleration), With<PlayerControlled>>,
 ) {
-    let up = keyboard.pressed(KeyCode::Up);
-    let down = keyboard.pressed(KeyCode::Down);
     let left = keyboard.pressed(KeyCode::Left);
     let right = keyboard.pressed(KeyCode::Right);
 
     for (thrust, mut acceleration) in query.iter_mut() {
         acceleration.rotation =
             if left { thrust.yaw } else { 0.0 } - if right { thrust.yaw } else { 0.0 };
-        acceleration.forward =
-            if up { thrust.forward } else { 0.0 } - if down { thrust.backward } else { 0.0 };
     }
 }
 
@@ -73,7 +90,8 @@ pub fn debug(
 pub struct ControlsPlugin;
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(thrust.system())
+        app.add_system(thrust_up_down.system())
+            .add_system(thrust_left_right.system())
             .add_system(fire.system())
             .add_system(debug.system());
     }
