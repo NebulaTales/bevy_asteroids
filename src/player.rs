@@ -125,6 +125,7 @@ fn spawn_player(
                 .insert(CollisionLayer(PLAYER))
                 .insert(Wrap::default())
                 .insert(Player)
+                .insert(ControlLocked)
                 .insert(FireAngleError(0.03))
                 .insert(Immunity::default());
         }
