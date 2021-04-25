@@ -1,9 +1,0 @@
-- [ ] Wrapping 
-  - [ ] Make Wraps able to use SpriteAtlas as well
-- [ ] Sprite
-  - [ ] Create Atlas from sprite, either manually or automatically
-  - [ ] Provide random asteroids
-  - [ ] Provide a bullet sprite
-  - [ ] Provide a ship sprite
-- [X] Collisions
-  - [X] Stop using sprite properties, provide a Collider enum with basic shapes
