@@ -3,7 +3,7 @@ use crate::{
     OBSTACLE, PLAYER,
 };
 use rand::prelude::*;
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
@@ -161,9 +161,16 @@ fn destroy_on_collision(
     q_asteroids: Query<(Entity, &Asteroid, &Transform, Option<&Velocity>)>,
     q_collides_with: Query<(&Transform, Option<&Velocity>)>,
 ) {
+    // Ensuires each collision is treated once
+    let mut already_done = HashSet::new();
+
     for collision in events.iter() {
         if let Ok((entity, asteroid, transform, velocity)) = q_asteroids.get(collision.source) {
+            if already_done.contains(&entity) {
+                continue;
+            }
             commands.entity(entity).despawn();
+            already_done.insert(entity);
 
             if let Some(asteroid) = match asteroid {
                 Asteroid::Big => Some(Asteroid::Small),
