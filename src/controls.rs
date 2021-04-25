@@ -54,7 +54,7 @@ pub fn thrust_left_right(
 pub fn fire(
     mut commands: Commands,
     keyboard: Res<Input<KeyCode>>,
-    mut query: Query<Entity, With<PlayerControlled>>,
+    mut query: Query<Entity, (With<PlayerControlled>, Without<ControlLocked>)>,
 ) {
     if keyboard.just_pressed(KeyCode::Space) {
         for entity in query.iter_mut() {
