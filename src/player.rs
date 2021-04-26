@@ -1,6 +1,7 @@
 use crate::{
     Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, ControlLocked,
-    FireAngleError, Friction, PlayerControlled, Shape2D, Thrust, Velocity, Wrap, OBSTACLE, PLAYER,
+    FireAngleError, Friction, Game, PlayerControlled, Shape2D, Thrust, Velocity, Wrap, OBSTACLE,
+    PLAYER,
 };
 
 use bevy::{
@@ -30,12 +31,22 @@ const SPRITE_NO_SHIELD: u32 = 12;
 fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
+    mut game: ResMut<Game>,
     q_player: Query<Entity, With<Player>>,
 ) {
+    let mut already_done = false;
     for collision in events.iter() {
         if let Ok(e) = q_player.get(collision.source) {
+            assert!(
+                !already_done,
+                "This prooves the ship collided more than once!!!"
+            );
+            already_done = true;
+
             commands.entity(e).despawn();
             commands.spawn().insert(SpawnPlayer::default());
+
+            game.lifes -= 1;
         }
     }
 }
