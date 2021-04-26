@@ -23,7 +23,7 @@ use std::time::Duration;
 enum Label {
     Teleport,
     Spawn,
-    Shift,
+    Make,
 }
 
 pub struct WrapCamera;
@@ -78,6 +78,7 @@ pub struct Ghost {
     shift: Vec3,
     rotation: Quat,
     direction: GDir,
+    index: Option<u32>,
 }
 
 impl Ghost {
@@ -87,6 +88,7 @@ impl Ghost {
             direction,
             shift: Default::default(),
             rotation: Default::default(),
+            index: None,
         }
     }
 }
@@ -583,10 +585,21 @@ fn auto_unwrap(mut commands: Commands, time: Res<Time>, mut query: Query<(Entity
     }
 }
 
+fn make_ghost_sprite_index(
+    q_targets: Query<(Entity, &TextureAtlasSprite)>,
+    mut q_ghosts: Query<&mut Ghost>,
+) {
+    for mut ghost in q_ghosts.iter_mut() {
+        if let Ok(sprite) = q_targets.get_component::<TextureAtlasSprite>(ghost.target) {
+            ghost.index = Some(sprite.index);
+        }
+    }
+}
+
 /// Recalculate the position of all ghosts according to their target.
 /// It does not directly changes the transform, but configures a shift+rotation
 /// information that is then used by `move_ghosts`
-fn set_ghosts_shift(
+fn make_ghost_transforms(
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     q_targets: Query<(Entity, &Transform)>,
     mut q_ghosts: Query<&mut Ghost>,
@@ -628,10 +641,19 @@ fn set_ghosts_shift(
 }
 
 /// Replace the ghosts according to their calculated transformation
-fn move_ghosts(mut query: Query<(&mut Transform, &Ghost)>) {
+fn set_ghost_transforms(mut query: Query<(&mut Transform, &Ghost)>) {
     for (mut transform, ghost) in query.iter_mut() {
         transform.translation = ghost.shift;
         transform.rotation = ghost.rotation;
+    }
+}
+
+/// Replace the ghosts according to their calculated transformation
+fn set_ghost_sprite_index(mut query: Query<(&mut TextureAtlasSprite, &Ghost)>) {
+    for (mut sprite, ghost) in query.iter_mut() {
+        if let Some(index) = ghost.index {
+            sprite.index = index;
+        }
     }
 }
 
@@ -663,12 +685,19 @@ impl Plugin for WrapPlugin {
                     .after(Label::Teleport),
             )
             .add_system(
-                set_ghosts_shift
+                make_ghost_transforms
                     .system()
-                    .label(Label::Shift)
+                    .label(Label::Make)
                     .after(Label::Spawn),
             )
-            .add_system(move_ghosts.system().after(Label::Shift))
+            .add_system(
+                make_ghost_sprite_index
+                    .system()
+                    .label(Label::Make)
+                    .after(Label::Spawn),
+            )
+            .add_system(set_ghost_transforms.system().after(Label::Make))
+            .add_system(set_ghost_sprite_index.system().after(Label::Make))
             .add_system(despawn_ghosts_indirect.system())
             .add_system(despawn_ghosts_direct_sprite.system())
             .add_system(despawn_ghosts_direct_sprite_atlas.system())
