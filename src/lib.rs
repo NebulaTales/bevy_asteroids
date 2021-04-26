@@ -11,17 +11,19 @@ mod controls;
 mod fire;
 mod movement;
 mod player;
+mod rules;
 mod wrap;
 
-pub use asteroids::RulesPlugin;
+pub use asteroids::AsteroidsPlugin;
 pub use collision::{Collider2D, CollisionEvent, CollisionLayer, CollisionMask, CollisionPlugin};
 pub use controls::{ControlLocked, ControlsPlugin, PlayerControlled};
 pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
 pub use player::PlayerPlugin;
+pub use rules::{Game, RulesPlugin};
 pub use wrap::{Ghost, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
-pub struct AsteroidPlugins;
+pub struct AsteroidsGamePlugins;
 
 pub const PLAYER: u8 = 0b00000001;
 pub const OBSTACLE: u8 = 0b00000010;
@@ -52,7 +54,7 @@ impl Plugin for BasePlugin {
     }
 }
 
-impl PluginGroup for AsteroidPlugins {
+impl PluginGroup for AsteroidsGamePlugins {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
         group.add(BasePlugin);
         group.add(CollisionPlugin);
@@ -60,6 +62,7 @@ impl PluginGroup for AsteroidPlugins {
         group.add(FirePlugin);
         group.add(MovementPlugin);
         group.add(RulesPlugin);
+        group.add(AsteroidsPlugin);
         group.add(PlayerPlugin);
         group.add(WrapPlugin);
     }

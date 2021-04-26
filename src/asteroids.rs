@@ -216,7 +216,7 @@ fn destroy_on_collision(
     }
 }
 
-pub struct RulesPlugin;
+pub struct AsteroidsPlugin;
 
 fn startup(
     mut commands: Commands,
@@ -233,7 +233,7 @@ fn startup(
     commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true)));
 }
 
-impl Plugin for RulesPlugin {
+impl Plugin for AsteroidsPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
             .add_system(timed_spawn.system())

@@ -1,11 +1,10 @@
-use asteroid::AsteroidPlugins;
+use asteroid::{AsteroidsGamePlugins, Game};
 use bevy::{
     app::App,
     asset::AssetServer,
     ecs::{
         query::With,
-        system::{Commands, IntoExclusiveSystem, IntoSystem, Res},
-        world::World,
+        system::{Commands, IntoSystem, Query, Res},
     },
     math::Vec3,
     render::color::Color,
@@ -26,9 +25,10 @@ fn main() {
             54.0 / 255.0,
         )))
         .add_plugins(DefaultPlugins)
-        .add_plugins(AsteroidPlugins)
+        .add_plugins(AsteroidsGamePlugins)
         .add_startup_system(setup.system())
-        .add_system(update_entity_count.exclusive_system())
+        //.add_system(update_entity_count.exclusive_system())
+        .add_system(update_lifes_count.system())
         .run();
 }
 
@@ -55,10 +55,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(EntityCounter);
 }
 
-fn update_entity_count(mut world: &mut World) {
-    let mut query = world.query_filtered::<&mut Text, With<EntityCounter>>();
-    let value = (*world.entities()).len();
-    for mut counter in query.iter_mut(&mut world) {
-        counter.sections[0].value = value.to_string();
+fn update_lifes_count(game: Res<Game>, mut q: Query<&mut Text, With<EntityCounter>>) {
+    if let Ok(mut label) = q.single_mut() {
+        label.sections[0].value = game.lifes.to_string();
     }
 }
