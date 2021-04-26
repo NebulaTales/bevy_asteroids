@@ -12,6 +12,7 @@ mod fire;
 mod movement;
 mod player;
 mod rules;
+mod ui;
 mod wrap;
 
 pub use asteroids::AsteroidsPlugin;
@@ -21,6 +22,7 @@ pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
 pub use player::PlayerPlugin;
 pub use rules::{Game, RulesPlugin};
+pub use ui::UIPlugin;
 pub use wrap::{Ghost, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
 pub struct AsteroidsGamePlugins;
@@ -61,6 +63,7 @@ impl PluginGroup for AsteroidsGamePlugins {
         group.add(ControlsPlugin);
         group.add(FirePlugin);
         group.add(MovementPlugin);
+        group.add(UIPlugin);
         group.add(RulesPlugin);
         group.add(AsteroidsPlugin);
         group.add(PlayerPlugin);
