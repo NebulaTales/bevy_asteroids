@@ -1,6 +1,6 @@
 use bevy::{
-    app::{AppBuilder, Plugin},
-    ecs::system::{Commands, IntoSystem},
+    app::{AppBuilder, AppExit, Events, Plugin},
+    ecs::system::{Commands, IntoSystem, Res, ResMut},
 };
 
 pub struct Game {
@@ -19,8 +19,15 @@ pub fn startup(mut commands: Commands) {
     commands.insert_resource(Game::default());
 }
 
+fn game_over(game: Res<Game>, mut signal: ResMut<Events<AppExit>>) {
+    if game.lifes == 0 {
+        signal.send(AppExit);
+    }
+}
+
 impl Plugin for RulesPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system());
+        app.add_startup_system(startup.system())
+            .add_system(game_over.system());
     }
 }
