@@ -1,4 +1,4 @@
-use crate::{Game, NoWrapProtection, WrapCamera};
+use crate::{NoWrapProtection, PlayerLifes, Score, WrapCamera, PLAYER_LIFES_MAX};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::{AssetServer, Assets},
@@ -50,10 +50,10 @@ fn despawn_life_tokens(
         &mut TextureAtlasSprite,
         Option<&mut LifeTokenAnimDelay>,
     )>,
-    game: Res<Game>,
+    lifes: Res<PlayerLifes>,
 ) {
     for (t, token, mut sprite, delay) in q_tokens.iter_mut() {
-        if token.0 >= game.lifes {
+        if token.0 >= lifes.0 {
             if let Some(mut delay) = delay {
                 if delay.0.tick(time.delta()).just_finished() {
                     if sprite.index > 0 {
@@ -72,9 +72,9 @@ fn despawn_life_tokens(
     }
 }
 
-fn update_lifes_count(game: Res<Game>, mut q: Query<&mut Text, With<ScoreCounter>>) {
+fn update_lifes_count(score: Res<Score>, mut q: Query<&mut Text, With<ScoreCounter>>) {
     if let Ok(mut label) = q.single_mut() {
-        label.sections[0].value = game.score.to_string();
+        label.sections[0].value = score.current.to_string();
     }
 }
 
@@ -91,7 +91,7 @@ fn startup(
         1,
     ));
 
-    for life in 0..3 {
+    for life in 0..PLAYER_LIFES_MAX {
         commands
             .spawn_bundle(SpriteSheetBundle {
                 texture_atlas: texture_atlas.clone(),

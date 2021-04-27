@@ -1,7 +1,7 @@
 use crate::{
     Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, ControlLocked,
-    FireAngleError, Friction, Game, PlayerControlled, Shape2D, Thrust, Velocity, Wrap, OBSTACLE,
-    PLAYER,
+    FireAngleError, Friction, PlayerControlled, PlayerLifes, Shape2D, Thrust, Velocity, Wrap,
+    OBSTACLE, PLAYER,
 };
 
 use bevy::{
@@ -31,7 +31,7 @@ const SPRITE_NO_SHIELD: u32 = 12;
 fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
-    mut game: ResMut<Game>,
+    mut lifes: ResMut<PlayerLifes>,
     q_player: Query<Entity, With<Player>>,
 ) {
     let mut already_done = false;
@@ -46,7 +46,7 @@ fn destroy_on_collision(
             commands.entity(e).despawn();
             commands.spawn().insert(SpawnPlayer::default());
 
-            game.lifes -= 1;
+            lifes.0 -= 1;
         }
     }
 }

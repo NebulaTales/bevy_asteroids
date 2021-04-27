@@ -1,6 +1,7 @@
 use crate::{
-    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Game, Shape2D, Velocity, Wrap, AMMO,
-    OBSTACLE, PLAYER, SCORE_BIG_ASTEROID, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
+    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Score, Shape2D, Velocity, Wrap,
+    WrapCamera, AMMO, OBSTACLE, PLAYER, SCORE_BIG_ASTEROID, SCORE_SMALL_ASTEROID,
+    SCORE_TINY_ASTEROID,
 };
 use rand::prelude::*;
 use std::{collections::HashSet, time::Duration};
@@ -11,6 +12,7 @@ use bevy::{
     core::{Time, Timer},
     ecs::{
         entity::Entity,
+        query::With,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     math::Size,
@@ -131,7 +133,7 @@ fn spawn_radius(mut commands: Commands, q_spawn: Query<(Entity, &SpawnRadius)>) 
 fn timed_spawn(
     mut commands: Commands,
     time: Res<Time>,
-    q_projection: Query<&OrthographicProjection>,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     mut timer: ResMut<SpawnTimer>,
 ) {
     let mut rng = thread_rng();
@@ -159,7 +161,7 @@ fn timed_spawn(
 fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
-    mut game: ResMut<Game>,
+    mut score: ResMut<Score>,
     q_asteroids: Query<(Entity, &Asteroid, &Transform, Option<&Velocity>)>,
     q_collides_with: Query<(&Transform, Option<&Velocity>)>,
 ) {
@@ -174,7 +176,7 @@ fn destroy_on_collision(
             commands.entity(entity).despawn();
             already_done.insert(entity);
 
-            game.score += *asteroid as u16;
+            score.add(*asteroid as u16);
 
             if let Some(asteroid) = match asteroid {
                 Asteroid::Big => Some(Asteroid::Small),
