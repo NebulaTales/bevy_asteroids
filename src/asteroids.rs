@@ -87,7 +87,6 @@ fn spawn(
                 ..Default::default()
             })
             .insert(NoWrapProtection);
-            println!("pouet");
         } else {
             e.insert_bundle(SpriteSheetBundle {
                 texture_atlas: texture_atlas.0.clone(),
