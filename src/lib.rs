@@ -23,7 +23,7 @@ pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
 pub use player::PlayerPlugin;
 pub use rules::{Game, RulesPlugin};
 pub use ui::UIPlugin;
-pub use wrap::{Ghost, Wrap, WrapCamera, WrapPlugin, Wrapped};
+pub use wrap::{Ghost, NoWrapProtection, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
 pub struct AsteroidsGamePlugins;
 

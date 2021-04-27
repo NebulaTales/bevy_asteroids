@@ -27,6 +27,7 @@ enum Label {
 }
 
 pub struct WrapCamera;
+pub struct NoWrapProtection;
 
 pub struct Wrap {
     remaining: Option<u8>,
@@ -385,15 +386,22 @@ fn despawn_ghosts_direct_sprite_atlas(
         }
     }
 }
+
 /// Despawner for any main entity (None of `Ghost`, `Wrap` or `Wrapped`
 /// When the sprite goes out of screen.
 /// To see how an entity can lost its `Wrapped` tag, see `despawn_ghost`direct`
+/// Added a marker that protects the entity from despawn, just in case.
 fn despawn_unwrapped_sprite(
     mut commands: Commands,
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     mut query: Query<
         (Entity, &Sprite, &mut Transform),
-        (Without<Wrap>, Without<Wrapped>, Without<Ghost>),
+        (
+            Without<Wrap>,
+            Without<Wrapped>,
+            Without<Ghost>,
+            Without<NoWrapProtection>,
+        ),
     >,
 ) {
     if let Ok(projection) = q_projection.single() {
@@ -402,6 +410,7 @@ fn despawn_unwrapped_sprite(
             let sprite_rect = Area::new(transform.translation.truncate(), sprite.size);
 
             if sprite_rect.outside(&screen_rect) {
+                println!("Despawn {:?}", entity);
                 commands.entity(entity).despawn();
             }
         }
@@ -419,7 +428,12 @@ fn despawn_unwrapped_sprite_atlas(
             &mut Transform,
             &TextureAtlasSprite,
         ),
-        (Without<Wrap>, Without<Wrapped>, Without<Ghost>),
+        (
+            Without<Wrap>,
+            Without<Wrapped>,
+            Without<Ghost>,
+            Without<NoWrapProtection>,
+        ),
     >,
 ) {
     if let Ok(projection) = q_projection.single() {
