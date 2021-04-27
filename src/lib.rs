@@ -12,6 +12,7 @@ mod fire;
 mod movement;
 mod player;
 mod rules;
+mod score;
 mod ui;
 mod wrap;
 
@@ -21,9 +22,9 @@ pub use controls::{ControlLocked, ControlsPlugin, PlayerControlled};
 pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
 pub use player::PlayerPlugin;
-pub use rules::{
-    PlayerLifes, RulesPlugin, Score, PLAYER_LIFES_MAX, SCORE_BIG_ASTEROID, SCORE_SMALL_ASTEROID,
-    SCORE_TINY_ASTEROID,
+pub use rules::{PlayerLifes, RulesPlugin, PLAYER_LIFES_MAX};
+pub use score::{
+    Score, ScorePlugin, SCORE_BIG_ASTEROID, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
 pub use ui::UIPlugin;
 pub use wrap::{Ghost, NoWrapProtection, Wrap, WrapCamera, WrapPlugin, Wrapped};
@@ -61,15 +62,16 @@ impl Plugin for BasePlugin {
 
 impl PluginGroup for AsteroidsGamePlugins {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
+        group.add(AsteroidsPlugin);
         group.add(BasePlugin);
         group.add(CollisionPlugin);
         group.add(ControlsPlugin);
         group.add(FirePlugin);
         group.add(MovementPlugin);
-        group.add(UIPlugin);
-        group.add(RulesPlugin);
-        group.add(AsteroidsPlugin);
         group.add(PlayerPlugin);
+        group.add(RulesPlugin);
+        group.add(ScorePlugin);
+        group.add(UIPlugin);
         group.add(WrapPlugin);
     }
 }
