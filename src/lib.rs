@@ -19,7 +19,7 @@ mod wrap;
 pub use asteroids::AsteroidsPlugin;
 pub use collision::{Collider2D, CollisionEvent, CollisionLayer, CollisionMask, CollisionPlugin};
 pub use controls::{ControlLocked, ControlsPlugin, PlayerControlled};
-pub use fire::{FireAngleError, FirePlugin, Firing};
+pub use fire::{FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
 pub use player::PlayerPlugin;
 pub use rules::{PlayerLifes, RulesPlugin, PLAYER_LIFES_MAX};

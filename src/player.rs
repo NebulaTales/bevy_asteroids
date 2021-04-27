@@ -1,7 +1,6 @@
 use crate::{
     Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, ControlLocked,
-    FireAngleError, Friction, PlayerControlled, PlayerLifes, Shape2D, Thrust, Velocity, Wrap,
-    OBSTACLE, PLAYER,
+    Friction, PlayerControlled, PlayerLifes, Shape2D, Thrust, Velocity, Wrap, OBSTACLE, PLAYER,
 };
 
 use bevy::{
@@ -137,7 +136,6 @@ fn spawn_player(
                 .insert(Wrap::default())
                 .insert(Player)
                 .insert(ControlLocked)
-                .insert(FireAngleError(0.03))
                 .insert(Immunity::default());
         }
     }

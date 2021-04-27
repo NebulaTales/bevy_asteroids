@@ -24,8 +24,6 @@ pub struct Firing {
     time_span: Option<Timer>,
 }
 
-pub struct FireAngleError(pub f32);
-
 impl Default for Firing {
     fn default() -> Self {
         Firing { time_span: None }
@@ -36,6 +34,7 @@ const FLOOR_SPEED: f32 = 200.0;
 const INITIAL_SPEED: f32 = 500.0;
 const PEW_PEW_SPEED: u64 = 300;
 const PEW_PEW_SIZE: f32 = 3.0;
+const FIRE_ANGLE_ERROR: f32 = 0.03;
 
 struct Fire;
 pub struct FireColors(Vec<Handle<ColorMaterial>>);
@@ -52,20 +51,15 @@ fn destroy_on_collision(
     }
 }
 
-pub fn spawn_fire(
+pub fn spawn_fires(
     mut commands: Commands,
     time: Res<Time>,
     colors: Res<FireColors>,
-    mut query: Query<(
-        &mut Firing,
-        Option<&Transform>,
-        Option<&Velocity>,
-        Option<&FireAngleError>,
-    )>,
+    mut query: Query<(&mut Firing, Option<&Transform>, Option<&Velocity>)>,
 ) {
     let mut rng = thread_rng();
 
-    for (mut spawner, spawner_transform, spawner_velocity, angle_error) in query.iter_mut() {
+    for (mut spawner, spawner_transform, spawner_velocity) in query.iter_mut() {
         let fire = if let Some(time_span) = &mut spawner.time_span {
             time_span.tick(time.delta()).just_finished()
         } else {
@@ -84,10 +78,8 @@ pub fn spawn_fire(
             let rotation = transform.rotation.to_axis_angle();
             let mut angle = std::f32::consts::PI / 2.0 + rotation.0.z * rotation.1;
 
-            if let Some(error) = angle_error {
-                let error = std::f32::consts::PI * error.0;
-                angle += rng.gen_range(-error..error);
-            }
+            let error = std::f32::consts::PI * FIRE_ANGLE_ERROR;
+            angle += rng.gen_range(-error..error);
 
             let mut velocity = Vec2::new(angle.cos() * INITIAL_SPEED, angle.sin() * INITIAL_SPEED);
             if let Some(&spawner_velocity) = spawner_velocity {
@@ -138,7 +130,7 @@ pub struct FirePlugin;
 impl Plugin for FirePlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
-            .add_system(spawn_fire.system())
+            .add_system(spawn_fires.system())
             .add_system(destroy_on_collision.system());
     }
 }
