@@ -2,21 +2,21 @@ use crate::{Game, NoWrapProtection, WrapCamera};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::{AssetServer, Assets},
+    core::{Time, Timer},
     ecs::{
+        entity::Entity,
         query::With,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     math::{Vec2, Vec3},
-    render::{camera::OrthographicProjection, color::Color},
+    render::camera::OrthographicProjection,
     sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
-    text::{
-        prelude::{HorizontalAlign, VerticalAlign},
-        Text, Text2dBundle, TextAlignment, TextStyle,
-    },
     transform::components::Transform,
 };
+use std::time::Duration;
 
 struct LifeToken(u8);
+struct LifeTokenAnimDelay(Timer);
 
 const TOKEN_MARGIN: f32 = 25.0;
 // For now position according to cursor
@@ -33,7 +33,37 @@ fn position_life_tokens(
     }
 }
 
-struct DebugCounter;
+fn despawn_life_tokens(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut q_tokens: Query<(
+        Entity,
+        &LifeToken,
+        &mut TextureAtlasSprite,
+        Option<&mut LifeTokenAnimDelay>,
+    )>,
+    game: Res<Game>,
+) {
+    for (t, token, mut sprite, delay) in q_tokens.iter_mut() {
+        if token.0 >= game.lifes {
+            if let Some(mut delay) = delay {
+                if delay.0.tick(time.delta()).just_finished() {
+                    if sprite.index > 0 {
+                        sprite.index -= 1;
+                    } else {
+                        commands.entity(t).despawn();
+                    }
+                }
+            } else {
+                commands.entity(t).insert(LifeTokenAnimDelay(Timer::new(
+                    Duration::from_millis(50),
+                    true,
+                )));
+            }
+        }
+    }
+}
+
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -53,7 +83,7 @@ fn startup(
                 texture_atlas: texture_atlas.clone(),
                 transform: Transform::from_scale(Vec3::new(0.5, 0.5, 1.0)),
                 sprite: TextureAtlasSprite {
-                    index: 12,
+                    index: 11,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -61,39 +91,14 @@ fn startup(
             .insert(LifeToken(life))
             .insert(NoWrapProtection);
     }
-
-    commands
-        // 2d camera
-        .spawn_bundle(Text2dBundle {
-            text: Text::with_section(
-                "N/A",
-                TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 60.0,
-                    color: Color::WHITE,
-                },
-                TextAlignment {
-                    vertical: VerticalAlign::Center,
-                    horizontal: HorizontalAlign::Center,
-                },
-            ),
-            transform: Transform::from_translation(Vec3::new(0.0, 280.0, 100.0)),
-            ..Default::default()
-        })
-        .insert(DebugCounter);
 }
 
-fn update_lifes_count(game: Res<Game>, mut q: Query<&mut Text, With<DebugCounter>>) {
-    if let Ok(mut label) = q.single_mut() {
-        label.sections[0].value = game.lifes.to_string();
-    }
-}
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
-            .add_system(update_lifes_count.system());
-        app.add_system(position_life_tokens.system());
+            .add_system(despawn_life_tokens.system())
+            .add_system(position_life_tokens.system());
     }
 }
