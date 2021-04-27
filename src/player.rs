@@ -60,7 +60,7 @@ impl Default for Immunity {
     fn default() -> Self {
         Immunity {
             duration: Timer::from_seconds(3.0, false),
-            animation: Timer::from_seconds(0.1, true),
+            animation: Timer::from_seconds(0.06, true),
         }
     }
 }
