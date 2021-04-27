@@ -24,7 +24,7 @@ pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
 pub use player::PlayerPlugin;
 pub use rules::{PlayerLifes, RulesPlugin, PLAYER_LIFES_MAX};
 pub use score::{
-    Score, ScorePlugin, SCORE_BIG_ASTEROID, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
+    Score, ScorePlugin, SCORE_BIG_ASTEROID, SCORE_SAUCER, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
 pub use ui::UIPlugin;
 pub use wrap::{Ghost, NoWrapProtection, Wrap, WrapCamera, WrapPlugin, Wrapped};

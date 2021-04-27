@@ -6,6 +6,7 @@ use bevy::{
 pub const SCORE_BIG_ASTEROID: u16 = 5;
 pub const SCORE_SMALL_ASTEROID: u16 = 10;
 pub const SCORE_TINY_ASTEROID: u16 = 15;
+pub const SCORE_SAUCER: u16 = 100;
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct Score {

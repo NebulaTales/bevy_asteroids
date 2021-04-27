@@ -1,7 +1,7 @@
 use crate::{
-    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Score, Shape2D, Velocity, Wrap,
-    WrapCamera, AMMO, OBSTACLE, PLAYER, SCORE_BIG_ASTEROID, SCORE_SMALL_ASTEROID,
-    SCORE_TINY_ASTEROID,
+    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, NoWrapProtection, Score, Shape2D,
+    Velocity, Wrap, WrapCamera, AMMO, OBSTACLE, PLAYER, SCORE_BIG_ASTEROID, SCORE_SAUCER,
+    SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
 use rand::prelude::*;
 use std::{collections::HashSet, time::Duration};
@@ -18,7 +18,10 @@ use bevy::{
     math::Size,
     math::{Vec2, Vec3},
     render::camera::OrthographicProjection,
-    sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
+    sprite::{
+        entity::{SpriteBundle, SpriteSheetBundle},
+        ColorMaterial, TextureAtlas, TextureAtlasSprite,
+    },
     transform::components::Transform,
 };
 
@@ -28,10 +31,13 @@ enum Asteroid {
     Big = SCORE_BIG_ASTEROID,
     Small = SCORE_SMALL_ASTEROID,
     Tiny = SCORE_TINY_ASTEROID,
+    Saucer = SCORE_SAUCER,
 }
 
 struct SpawnTexture(Handle<TextureAtlas>);
+struct SaucerTexture(Handle<ColorMaterial>);
 struct SpawnTimer(Timer);
+struct SaucerTimer(Timer);
 
 #[derive(Debug)]
 struct Spawn {
@@ -44,12 +50,14 @@ struct Spawn {
 fn spawn(
     mut commands: Commands,
     texture_atlas: Res<SpawnTexture>,
+    saucer_texture: Res<SaucerTexture>,
     q_spawn: Query<(Entity, &Spawn)>,
 ) {
     for (entity, spawn) in q_spawn.iter() {
         let mut rng = thread_rng();
         let scale = match spawn.asteroid {
             Asteroid::Big => 1.0,
+            Asteroid::Saucer => 0.75,
             Asteroid::Small => 0.5,
             Asteroid::Tiny => 0.25,
         };
@@ -60,15 +68,6 @@ fn spawn(
 
         let mut e = commands.entity(entity);
         e.remove::<Spawn>()
-            .insert_bundle(SpriteSheetBundle {
-                texture_atlas: texture_atlas.0.clone(),
-                transform,
-                sprite: TextureAtlasSprite {
-                    index: rng.gen_range(0..4),
-                    ..Default::default()
-                },
-                ..Default::default()
-            })
             .insert(Velocity::new(
                 Vec2::new(spawn.velocity.x, spawn.velocity.y),
                 spawn.spin,
@@ -81,8 +80,27 @@ fn spawn(
             .insert(CollisionMask(PLAYER | AMMO))
             .insert(spawn.asteroid);
 
-        if spawn.asteroid != Asteroid::Tiny {
-            e.insert(Wrap::default());
+        if spawn.asteroid == Asteroid::Saucer {
+            e.insert_bundle(SpriteBundle {
+                material: saucer_texture.0.clone(),
+                transform,
+                ..Default::default()
+            })
+            .insert(NoWrapProtection);
+            println!("pouet");
+        } else {
+            e.insert_bundle(SpriteSheetBundle {
+                texture_atlas: texture_atlas.0.clone(),
+                transform,
+                sprite: TextureAtlasSprite {
+                    index: rng.gen_range(0..4),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+            if spawn.asteroid != Asteroid::Tiny {
+                e.insert(Wrap::default());
+            }
         }
     }
 }
@@ -156,6 +174,43 @@ fn timed_spawn(
     }
 }
 
+fn saucer_timed_spawn(
+    mut commands: Commands,
+    time: Res<Time>,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    mut timer: ResMut<SaucerTimer>,
+) {
+    let mut rng = thread_rng();
+    if timer.0.tick(time.delta()).just_finished() {
+        timer
+            .0
+            .set_duration(Duration::from_secs(15 + rng.gen_range(1..5)));
+        if let Ok(projection) = q_projection.single() {
+            let y = rng.gen_range(projection.bottom + 64.0..projection.top - 64.0);
+            let (position, velocity, spin) = if rng.gen_bool(0.5) {
+                (
+                    Vec2::new(projection.left - 64.0, y),
+                    Vec2::new(300.0, 0.0),
+                    5.0,
+                )
+            } else {
+                (
+                    Vec2::new(projection.right + 64.0, y),
+                    Vec2::new(-300.0, 0.0),
+                    -5.0,
+                )
+            };
+
+            commands.spawn().insert(Spawn {
+                asteroid: Asteroid::Saucer,
+                position,
+                velocity,
+                spin,
+            });
+        }
+    }
+}
+
 /// On collision, an asteroid will despawn and, in place smaller asteroids will
 /// spawn.
 fn destroy_on_collision(
@@ -181,7 +236,7 @@ fn destroy_on_collision(
             if let Some(asteroid) = match asteroid {
                 Asteroid::Big => Some(Asteroid::Small),
                 Asteroid::Small => Some(Asteroid::Tiny),
-                Asteroid::Tiny => None,
+                _ => None,
             } {
                 let center = transform.translation.into();
 
@@ -228,6 +283,7 @@ fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     commands.insert_resource(SpawnTexture(texture_atlases.add(TextureAtlas::from_grid(
         asset_server.load("sprites/asteroids.png"),
@@ -236,13 +292,18 @@ fn startup(
         4,
     ))));
 
+    commands.insert_resource(SaucerTexture(
+        materials.add(asset_server.load("sprites/saucer.png").into()),
+    ));
     commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true)));
+    commands.insert_resource(SaucerTimer(Timer::from_seconds(10.0, true)));
 }
 
 impl Plugin for AsteroidsPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
             .add_system(timed_spawn.system())
+            .add_system(saucer_timed_spawn.system())
             .add_system(spawn.system())
             .add_system(spawn_radius.system())
             .add_system(destroy_on_collision.system());
