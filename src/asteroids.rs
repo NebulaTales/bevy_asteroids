@@ -1,6 +1,6 @@
 use crate::{
-    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap, AMMO,
-    OBSTACLE, PLAYER,
+    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Game, Shape2D, Velocity, Wrap, AMMO,
+    OBSTACLE, PLAYER, SCORE_BIG_ASTEROID, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
 use rand::prelude::*;
 use std::{collections::HashSet, time::Duration};
@@ -21,10 +21,11 @@ use bevy::{
 };
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[repr(u16)]
 enum Asteroid {
-    Big,
-    Small,
-    Tiny,
+    Big = SCORE_BIG_ASTEROID,
+    Small = SCORE_SMALL_ASTEROID,
+    Tiny = SCORE_TINY_ASTEROID,
 }
 
 struct SpawnTexture(Handle<TextureAtlas>);
@@ -158,6 +159,7 @@ fn timed_spawn(
 fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
+    mut game: ResMut<Game>,
     q_asteroids: Query<(Entity, &Asteroid, &Transform, Option<&Velocity>)>,
     q_collides_with: Query<(&Transform, Option<&Velocity>)>,
 ) {
@@ -171,6 +173,8 @@ fn destroy_on_collision(
             }
             commands.entity(entity).despawn();
             already_done.insert(entity);
+
+            game.score += *asteroid as u16;
 
             if let Some(asteroid) = match asteroid {
                 Asteroid::Big => Some(Asteroid::Small),

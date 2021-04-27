@@ -410,7 +410,6 @@ fn despawn_unwrapped_sprite(
             let sprite_rect = Area::new(transform.translation.truncate(), sprite.size);
 
             if sprite_rect.outside(&screen_rect) {
-                println!("Despawn {:?}", entity);
                 commands.entity(entity).despawn();
             }
         }

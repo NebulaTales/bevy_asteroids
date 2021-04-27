@@ -21,7 +21,7 @@ pub use controls::{ControlLocked, ControlsPlugin, PlayerControlled};
 pub use fire::{FireAngleError, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
 pub use player::PlayerPlugin;
-pub use rules::{Game, RulesPlugin};
+pub use rules::{Game, RulesPlugin, SCORE_BIG_ASTEROID, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID};
 pub use ui::UIPlugin;
 pub use wrap::{Ghost, NoWrapProtection, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
