@@ -18,10 +18,7 @@ use bevy::{
     math::Size,
     math::{Vec2, Vec3},
     render::camera::OrthographicProjection,
-    sprite::{
-        entity::{SpriteBundle, SpriteSheetBundle},
-        ColorMaterial, TextureAtlas, TextureAtlasSprite,
-    },
+    sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
     transform::components::Transform,
 };
 
@@ -35,7 +32,6 @@ enum Asteroid {
 }
 
 struct SpawnTexture(Handle<TextureAtlas>);
-struct SaucerTexture(Handle<ColorMaterial>);
 struct SpawnTimer(Timer);
 struct SaucerTimer(Timer);
 
@@ -50,7 +46,6 @@ struct Spawn {
 fn spawn(
     mut commands: Commands,
     texture_atlas: Res<SpawnTexture>,
-    saucer_texture: Res<SaucerTexture>,
     q_spawn: Query<(Entity, &Spawn)>,
 ) {
     for (entity, spawn) in q_spawn.iter() {
@@ -78,28 +73,25 @@ fn spawn(
             })
             .insert(CollisionLayer(OBSTACLE))
             .insert(CollisionMask(PLAYER | AMMO))
-            .insert(spawn.asteroid);
-
-        if spawn.asteroid == Asteroid::Saucer {
-            e.insert_bundle(SpriteBundle {
-                material: saucer_texture.0.clone(),
-                transform,
-                ..Default::default()
-            })
-            .insert(NoWrapProtection);
-        } else {
-            e.insert_bundle(SpriteSheetBundle {
+            .insert(spawn.asteroid)
+            .insert_bundle(SpriteSheetBundle {
                 texture_atlas: texture_atlas.0.clone(),
                 transform,
                 sprite: TextureAtlasSprite {
-                    index: rng.gen_range(0..4),
+                    index: if spawn.asteroid == Asteroid::Saucer {
+                        0
+                    } else {
+                        rng.gen_range(1..5)
+                    },
                     ..Default::default()
                 },
                 ..Default::default()
             });
-            if spawn.asteroid != Asteroid::Tiny {
-                e.insert(Wrap::default());
-            }
+        if spawn.asteroid != Asteroid::Tiny && spawn.asteroid != Asteroid::Saucer {
+            e.insert(Wrap::default());
+        }
+        if spawn.asteroid == Asteroid::Saucer {
+            e.insert(NoWrapProtection);
         }
     }
 }
@@ -264,7 +256,7 @@ fn destroy_on_collision(
                     + source_velocity.translation * 2.0
                     + target_velocity.translation;
 
-                for _ in 0..3 {
+                for _ in 0..thread_rng().gen_range(2..5) {
                     commands.spawn().insert(SpawnRadius {
                         asteroid,
                         origin: (center, Size::new(10.0, 10.0)),
@@ -282,18 +274,14 @@ fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     commands.insert_resource(SpawnTexture(texture_atlases.add(TextureAtlas::from_grid(
         asset_server.load("sprites/asteroids.png"),
         Vec2::new(64.0, 64.0),
         1,
-        4,
+        5,
     ))));
 
-    commands.insert_resource(SaucerTexture(
-        materials.add(asset_server.load("sprites/saucer.png").into()),
-    ));
     commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true)));
     commands.insert_resource(SaucerTimer(Timer::from_seconds(10.0, true)));
 }
