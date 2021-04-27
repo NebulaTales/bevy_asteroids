@@ -12,7 +12,6 @@ edition = "2018"
 rand = "0.8.0"
 
 [dependencies.bevy]
-features = ["dynamic"]
 git = "https://github.com/bevyengine/bevy"
 branch = "main"
 
