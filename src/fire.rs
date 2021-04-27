@@ -55,11 +55,11 @@ pub fn spawn_fires(
     mut commands: Commands,
     time: Res<Time>,
     colors: Res<FireColors>,
-    mut query: Query<(&mut Firing, Option<&Transform>, Option<&Velocity>)>,
+    mut query: Query<(&mut Firing, &Transform, Option<&Velocity>)>,
 ) {
     let mut rng = thread_rng();
 
-    for (mut spawner, spawner_transform, spawner_velocity) in query.iter_mut() {
+    for (mut spawner, transform, spawner_velocity) in query.iter_mut() {
         let fire = if let Some(time_span) = &mut spawner.time_span {
             time_span.tick(time.delta()).just_finished()
         } else {
@@ -68,12 +68,6 @@ pub fn spawn_fires(
         };
 
         if fire {
-            let transform = if let Some(&transform) = spawner_transform {
-                transform
-            } else {
-                Default::default()
-            };
-
             // Calculate initial velocity by computing vector*INITIAL_SPEED
             let rotation = transform.rotation.to_axis_angle();
             let mut angle = std::f32::consts::PI / 2.0 + rotation.0.z * rotation.1;
