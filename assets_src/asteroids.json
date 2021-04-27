@@ -1,5 +1,5 @@
 { "frames": {
-   "asteroids (Layer 1).aseprite": {
+   "asteroids (Layer 5).aseprite": {
     "frame": { "x": 0, "y": 0, "w": 64, "h": 64 },
     "rotated": false,
     "trimmed": false,
@@ -7,7 +7,7 @@
     "sourceSize": { "w": 64, "h": 64 },
     "duration": 100
    },
-   "asteroids (Layer 2).aseprite": {
+   "asteroids (Layer 1).aseprite": {
     "frame": { "x": 0, "y": 64, "w": 64, "h": 64 },
     "rotated": false,
     "trimmed": false,
@@ -15,7 +15,7 @@
     "sourceSize": { "w": 64, "h": 64 },
     "duration": 100
    },
-   "asteroids (Layer 3).aseprite": {
+   "asteroids (Layer 2).aseprite": {
     "frame": { "x": 0, "y": 128, "w": 64, "h": 64 },
     "rotated": false,
     "trimmed": false,
@@ -23,8 +23,16 @@
     "sourceSize": { "w": 64, "h": 64 },
     "duration": 100
    },
-   "asteroids (Layer 4).aseprite": {
+   "asteroids (Layer 3).aseprite": {
     "frame": { "x": 0, "y": 192, "w": 64, "h": 64 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 100
+   },
+   "asteroids (Layer 4).aseprite": {
+    "frame": { "x": 0, "y": 256, "w": 64, "h": 64 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 },
@@ -34,16 +42,21 @@
  },
  "meta": {
   "app": "http://www.aseprite.org/",
-  "version": "1.2.25-dev",
+  "version": "1.2.27-x64",
   "image": "asteroids.png",
   "format": "RGBA8888",
-  "size": { "w": 64, "h": 256 },
+  "size": { "w": 64, "h": 320 },
   "scale": "1",
+  "frameTags": [
+  ],
   "layers": [
+   { "name": "Layer 5", "opacity": 255, "blendMode": "normal" },
    { "name": "Layer 1", "opacity": 255, "blendMode": "normal" },
    { "name": "Layer 2", "opacity": 255, "blendMode": "normal" },
    { "name": "Layer 3", "opacity": 255, "blendMode": "normal" },
    { "name": "Layer 4", "opacity": 255, "blendMode": "normal" }
+  ],
+  "slices": [
   ]
  }
 }
