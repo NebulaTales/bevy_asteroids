@@ -8,14 +8,18 @@ use bevy::{
         query::With,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
-    math::{Vec2, Vec3},
+    math::{Rect, Vec2, Vec3},
     render::{camera::OrthographicProjection, color::Color},
     sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
     text::{
         prelude::{HorizontalAlign, VerticalAlign},
-        Text, Text2dBundle, TextAlignment, TextStyle,
+        Text, TextAlignment, TextStyle,
     },
     transform::components::Transform,
+    ui::{
+        entity::{TextBundle, UiCameraBundle},
+        PositionType, Style, Val,
+    },
 };
 use std::time::Duration;
 
@@ -102,9 +106,20 @@ fn startup(
             .insert(NoWrapProtection);
     }
 
+    commands.spawn_bundle(UiCameraBundle::default());
     commands
         // 2d camera
-        .spawn_bundle(Text2dBundle {
+        .spawn_bundle(TextBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                position: Rect {
+                    top: Val::Percent(0.0),
+                    left: Val::Percent(0.0),
+                    ..Default::default()
+                },
+
+                ..Default::default()
+            },
             text: Text::with_section(
                 "0",
                 TextStyle {
@@ -117,7 +132,6 @@ fn startup(
                     horizontal: HorizontalAlign::Center,
                 },
             ),
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 100.0)),
             ..Default::default()
         })
         .insert(ScoreCounter::default());
