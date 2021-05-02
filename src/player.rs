@@ -58,7 +58,7 @@ fn destroy_on_collision(
             // Create particles
             for _ in 0..200 as u16 {
                 let size = {
-                    let size = rng.gen_range(0.1..3.0);
+                    let size = rng.gen_range(1.0..3.0);
                     Vec2::new(size, size)
                 };
 
