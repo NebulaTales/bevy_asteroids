@@ -36,7 +36,7 @@ const PEW_PEW_SPEED: u64 = 300;
 const PEW_PEW_SIZE: f32 = 3.0;
 const FIRE_ANGLE_ERROR: f32 = 0.03;
 
-struct Fire;
+pub struct Fire;
 pub struct FireColors(Vec<Handle<ColorMaterial>>);
 
 fn destroy_on_collision(

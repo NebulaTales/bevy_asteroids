@@ -1,7 +1,9 @@
 use crate::{
-    Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, ControlLocked,
-    Friction, PlayerControlled, PlayerLifes, Shape2D, Thrust, Velocity, Wrap, OBSTACLE, PLAYER,
+    Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, ControlLocked, Fire,
+    Friction, PlayerControlled, PlayerLifes, Shape2D, Thrust, Velocity, Wrap, AMMO, OBSTACLE,
+    PLAYER,
 };
+use rand::prelude::*;
 
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
@@ -12,8 +14,13 @@ use bevy::{
         query::{Added, With},
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
-    math::Vec2,
-    sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
+    math::{Vec2, Vec3},
+    render::color::Color,
+    sprite::{
+        entity::{SpriteBundle, SpriteSheetBundle},
+        ColorMaterial, Sprite, TextureAtlas, TextureAtlasSprite,
+    },
+    transform::components::Transform,
 };
 
 struct Player;
@@ -26,16 +33,19 @@ struct Immunity {
 
 const SPRITE_FULL_SHIELD: u32 = 11;
 const SPRITE_NO_SHIELD: u32 = 12;
+struct PlayerColors(Vec<Handle<ColorMaterial>>);
 
 fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
     mut lifes: ResMut<PlayerLifes>,
-    q_player: Query<Entity, With<Player>>,
+    colors: Res<PlayerColors>,
+    q_player: Query<(Entity, &Velocity, &Transform), With<Player>>,
 ) {
+    let mut rng = thread_rng();
     let mut already_done = false;
     for collision in events.iter() {
-        if let Ok(e) = q_player.get(collision.source) {
+        if let Ok((e, ship_velocity, ship_transform)) = q_player.get(collision.source) {
             assert!(
                 !already_done,
                 "This prooves the ship collided more than once!!!"
@@ -44,6 +54,38 @@ fn destroy_on_collision(
 
             commands.entity(e).despawn();
             commands.spawn().insert(SpawnPlayer::default());
+
+            // Create particles
+            for _ in 0..100 as u16 {
+                let size = {
+                    let size = rng.gen_range(0.1..3.0);
+                    Vec2::new(size, size)
+                };
+
+                let angle = rng.gen_range(0.0..std::f32::consts::PI * 2.0);
+                let far = rng.gen_range(0.0..32.0);
+
+                let relative_position = Vec3::new(angle.cos() * far, angle.sin() * far, 0.0);
+
+                let velocity = ship_velocity.translation + relative_position.into();
+                commands
+                    .spawn_bundle(SpriteBundle {
+                        material: colors.0[rng.gen_range(0..colors.0.len())].clone(),
+                        transform: Transform::from_translation(
+                            ship_transform.translation + relative_position,
+                        ),
+                        sprite: Sprite::new(size),
+                        ..Default::default()
+                    })
+                    .insert(Velocity::new(velocity, 0.0))
+                    .insert(Collider2D {
+                        shape: Shape2D::Rectangle(size),
+                        ..Default::default()
+                    })
+                    .insert(Fire)
+                    .insert(CollisionLayer(AMMO))
+                    .insert(CollisionMask(OBSTACLE));
+            }
 
             lifes.0 -= 1;
         }
@@ -145,6 +187,7 @@ pub fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     commands.insert_resource(SpawnTexture(texture_atlases.add(TextureAtlas::from_grid(
         asset_server.load("sprites/ship.png"),
@@ -154,6 +197,14 @@ pub fn startup(
     ))));
 
     commands.spawn().insert(SpawnPlayer::default());
+
+    commands.insert_resource(PlayerColors(vec![
+        materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.35, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.60, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.81, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.91, 0.03).into()),
+    ]));
 }
 
 pub struct PlayerPlugin;

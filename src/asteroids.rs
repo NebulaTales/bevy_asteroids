@@ -1,6 +1,6 @@
 use crate::{
-    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, NoWrapProtection, Score, Shape2D,
-    Velocity, Wrap, WrapCamera, AMMO, OBSTACLE, PLAYER, SCORE_BIG_ASTEROID, SCORE_SAUCER,
+    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Fire, NoWrapProtection, Score,
+    Shape2D, Velocity, Wrap, WrapCamera, AMMO, OBSTACLE, PLAYER, SCORE_BIG_ASTEROID, SCORE_SAUCER,
     SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
 use rand::prelude::*;
@@ -17,8 +17,11 @@ use bevy::{
     },
     math::Size,
     math::{Vec2, Vec3},
-    render::camera::OrthographicProjection,
-    sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
+    render::{camera::OrthographicProjection, color::Color},
+    sprite::{
+        entity::{SpriteBundle, SpriteSheetBundle},
+        ColorMaterial, Sprite, TextureAtlas, TextureAtlasSprite,
+    },
     transform::components::Transform,
 };
 
@@ -34,6 +37,8 @@ enum Asteroid {
 struct SpawnTexture(Handle<TextureAtlas>);
 struct SpawnTimer(Timer);
 struct SaucerTimer(Timer);
+struct ParticleColors(Vec<Handle<ColorMaterial>>);
+struct SaucerParticleColors(Vec<Handle<ColorMaterial>>);
 
 #[derive(Debug)]
 struct Spawn {
@@ -43,6 +48,15 @@ struct Spawn {
     spin: f32,
 }
 
+fn asteroid_scale(asteroid: Asteroid) -> f32 {
+    match asteroid {
+        Asteroid::Big => 1.0,
+        Asteroid::Saucer => 0.75,
+        Asteroid::Small => 0.5,
+        Asteroid::Tiny => 0.25,
+    }
+}
+
 fn spawn(
     mut commands: Commands,
     texture_atlas: Res<SpawnTexture>,
@@ -50,12 +64,7 @@ fn spawn(
 ) {
     for (entity, spawn) in q_spawn.iter() {
         let mut rng = thread_rng();
-        let scale = match spawn.asteroid {
-            Asteroid::Big => 1.0,
-            Asteroid::Saucer => 0.75,
-            Asteroid::Small => 0.5,
-            Asteroid::Tiny => 0.25,
-        };
+        let scale = asteroid_scale(spawn.asteroid);
 
         let transform =
             Transform::from_translation(Vec3::new(spawn.position.x, spawn.position.y, 10.0))
@@ -208,11 +217,14 @@ fn destroy_on_collision(
     mut commands: Commands,
     mut events: EventReader<CollisionEvent>,
     mut score: ResMut<Score>,
+    particle_colors: Res<ParticleColors>,
+    saucer_particle_colors: Res<SaucerParticleColors>,
     q_asteroids: Query<(Entity, &Asteroid, &Transform, Option<&Velocity>)>,
     q_collides_with: Query<(&Transform, Option<&Velocity>)>,
 ) {
     // Ensuires each collision is treated once
     let mut already_done = HashSet::new();
+    let mut rng = thread_rng();
 
     for collision in events.iter() {
         if let Ok((entity, asteroid, transform, velocity)) = q_asteroids.get(collision.source) {
@@ -224,6 +236,12 @@ fn destroy_on_collision(
 
             score.add(*asteroid as u16);
 
+            let source_velocity = if let Some(&velocity) = velocity {
+                velocity
+            } else {
+                Default::default()
+            };
+
             if let Some(asteroid) = match asteroid {
                 Asteroid::Big => Some(Asteroid::Small),
                 Asteroid::Small => Some(Asteroid::Tiny),
@@ -231,11 +249,6 @@ fn destroy_on_collision(
             } {
                 let center = transform.translation.into();
 
-                let source_velocity = if let Some(&velocity) = velocity {
-                    velocity
-                } else {
-                    Default::default()
-                };
                 let (target_position, target_velocity) =
                     if let Ok((target_position, target_velocity)) =
                         q_collides_with.get(collision.target)
@@ -256,12 +269,53 @@ fn destroy_on_collision(
                     + source_velocity.translation * 2.0
                     + target_velocity.translation;
 
-                for _ in 0..thread_rng().gen_range(2..5) {
+                for _ in 0..rng.gen_range(2..5) {
                     commands.spawn().insert(SpawnRadius {
                         asteroid,
                         origin: (center, Size::new(10.0, 10.0)),
                         direction: (p, Size::new(100.0, 100.0)),
                     });
+                }
+            }
+
+            // Generating particles
+            let scale = asteroid_scale(*asteroid);
+            for _ in 0..(200.0 * scale) as u16 {
+                let size = {
+                    let size = rng.gen_range(0.1..3.0);
+                    Vec2::new(size, size)
+                };
+
+                let angle = rng.gen_range(0.0..std::f32::consts::PI * 2.0);
+                let far = rng.gen_range(0.0..32.0 * scale);
+
+                let relative_position = Vec3::new(angle.cos() * far, angle.sin() * far, 0.0);
+
+                let velocity = source_velocity.translation + relative_position.into();
+                let mut e = commands.spawn_bundle(SpriteBundle {
+                    material: match asteroid {
+                        Asteroid::Saucer => saucer_particle_colors.0
+                            [rng.gen_range(0..saucer_particle_colors.0.len())]
+                        .clone(),
+
+                        _ => particle_colors.0[rng.gen_range(0..particle_colors.0.len())].clone(),
+                    },
+                    transform: Transform::from_translation(
+                        transform.translation + relative_position,
+                    ),
+                    sprite: Sprite::new(size),
+                    ..Default::default()
+                });
+                e.insert(Velocity::new(velocity, 0.0));
+
+                if asteroid == &Asteroid::Saucer {
+                    e.insert(Collider2D {
+                        shape: Shape2D::Rectangle(size),
+                        ..Default::default()
+                    })
+                    .insert(Fire)
+                    .insert(CollisionLayer(AMMO))
+                    .insert(CollisionMask(OBSTACLE));
                 }
             }
         }
@@ -274,6 +328,7 @@ fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     commands.insert_resource(SpawnTexture(texture_atlases.add(TextureAtlas::from_grid(
         asset_server.load("sprites/asteroids.png"),
@@ -284,6 +339,22 @@ fn startup(
 
     commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true)));
     commands.insert_resource(SaucerTimer(Timer::from_seconds(10.0, true)));
+
+    commands.insert_resource(ParticleColors(vec![
+        materials.add(Color::rgb(0.18, 0.18, 0.18).into()),
+        materials.add(Color::rgb(0.23, 0.20, 0.20).into()),
+        materials.add(Color::rgb(0.29, 0.26, 0.26).into()),
+        materials.add(Color::rgb(0.36, 0.29, 0.29).into()),
+        materials.add(Color::rgb(0.40, 0.32, 0.32).into()),
+    ]));
+
+    commands.insert_resource(SaucerParticleColors(vec![
+        materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.35, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.60, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.81, 0.0).into()),
+        materials.add(Color::rgb(1.0, 0.91, 0.03).into()),
+    ]));
 }
 
 impl Plugin for AsteroidsPlugin {
