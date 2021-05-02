@@ -21,9 +21,9 @@ use bevy::{
 fn main() {
     App::build()
         .insert_resource(ClearColor(Color::rgb(
-            40.0 / 255.0,
-            42.0 / 255.0,
-            54.0 / 255.0,
+            10.0 / 255.0,
+            10.0 / 255.0,
+            20.0 / 255.0,
         )))
         .add_plugins(DefaultPlugins)
         .add_plugins(AsteroidsGamePlugins)

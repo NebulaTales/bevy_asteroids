@@ -15,6 +15,7 @@ use bevy::{
         query::With,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
+    input::{keyboard::KeyCode, Input},
     math::Size,
     math::{Vec2, Vec3},
     render::{camera::OrthographicProjection, color::Color},
@@ -35,7 +36,7 @@ enum Asteroid {
 }
 
 struct SpawnTexture(Handle<TextureAtlas>);
-struct SpawnTimer(Timer);
+struct SpawnTimer(Timer, bool);
 struct SaucerTimer(Timer);
 struct ParticleColors(Vec<Handle<ColorMaterial>>);
 struct SaucerParticleColors(Vec<Handle<ColorMaterial>>);
@@ -148,6 +149,13 @@ fn spawn_radius(mut commands: Commands, q_spawn: Query<(Entity, &SpawnRadius)>) 
     }
 }
 
+fn toggle_timed_spawn(keyboard: Res<Input<KeyCode>>, mut timer: ResMut<SpawnTimer>) {
+    if keyboard.just_pressed(KeyCode::A) {
+        timer.1 = !timer.1;
+        dbg!(timer.1);
+    }
+}
+
 fn timed_spawn(
     mut commands: Commands,
     time: Res<Time>,
@@ -155,7 +163,7 @@ fn timed_spawn(
     mut timer: ResMut<SpawnTimer>,
 ) {
     let mut rng = thread_rng();
-    if timer.0.tick(time.delta()).just_finished() {
+    if timer.1 && timer.0.tick(time.delta()).just_finished() {
         timer
             .0
             .set_duration(Duration::from_secs(rng.gen_range(1..15)));
@@ -279,19 +287,29 @@ fn destroy_on_collision(
             }
 
             // Generating particles
-            let scale = asteroid_scale(*asteroid);
-            for _ in 0..(200.0 * scale) as u16 {
+
+            let (count, radius, velocity_factor) = match asteroid {
+                Asteroid::Saucer => (500.0, 32.0, 50.0),
+                _ => {
+                    let scale = asteroid_scale(*asteroid);
+                    (200.0 * scale, 32.0 * scale, 1.0)
+                }
+            };
+
+            for _ in 0..count as u16 {
                 let size = {
-                    let size = rng.gen_range(0.1..3.0);
+                    let size = rng.gen_range(1.0..3.0);
                     Vec2::new(size, size)
                 };
 
                 let angle = rng.gen_range(0.0..std::f32::consts::PI * 2.0);
-                let far = rng.gen_range(0.0..32.0 * scale);
+                let far = rng.gen_range(0.0..radius);
 
                 let relative_position = Vec3::new(angle.cos() * far, angle.sin() * far, 0.0);
 
-                let velocity = source_velocity.translation + relative_position.into();
+                let velocity =
+                    source_velocity.translation + (relative_position * velocity_factor).into();
+
                 let mut e = commands.spawn_bundle(SpriteBundle {
                     material: match asteroid {
                         Asteroid::Saucer => saucer_particle_colors.0
@@ -337,7 +355,7 @@ fn startup(
         5,
     ))));
 
-    commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true)));
+    commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true), true));
     commands.insert_resource(SaucerTimer(Timer::from_seconds(10.0, true)));
 
     commands.insert_resource(ParticleColors(vec![
@@ -363,6 +381,7 @@ impl Plugin for AsteroidsPlugin {
             .add_system(timed_spawn.system())
             .add_system(saucer_timed_spawn.system())
             .add_system(spawn.system())
+            .add_system(toggle_timed_spawn.system())
             .add_system(spawn_radius.system())
             .add_system(destroy_on_collision.system());
     }
