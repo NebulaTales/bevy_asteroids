@@ -56,7 +56,7 @@ fn destroy_on_collision(
             commands.spawn().insert(SpawnPlayer::default());
 
             // Create particles
-            for _ in 0..200 as u16 {
+            for _ in 0..500 as u16 {
                 let size = {
                     let size = rng.gen_range(1.0..3.0);
                     Vec2::new(size, size)
@@ -67,7 +67,7 @@ fn destroy_on_collision(
 
                 let relative_position = Vec3::new(angle.cos() * far, angle.sin() * far, 0.0);
 
-                let velocity = ship_velocity.translation + relative_position.into();
+                let velocity = ship_velocity.translation + (relative_position * 50.0).into();
                 commands
                     .spawn_bundle(SpriteBundle {
                         material: colors.0[rng.gen_range(0..colors.0.len())].clone(),
