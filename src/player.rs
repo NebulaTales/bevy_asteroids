@@ -56,7 +56,7 @@ fn destroy_on_collision(
             commands.spawn().insert(SpawnPlayer::default());
 
             // Create particles
-            for _ in 0..100 as u16 {
+            for _ in 0..200 as u16 {
                 let size = {
                     let size = rng.gen_range(0.1..3.0);
                     Vec2::new(size, size)
@@ -199,11 +199,12 @@ pub fn startup(
     commands.spawn().insert(SpawnPlayer::default());
 
     commands.insert_resource(PlayerColors(vec![
-        materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-        materials.add(Color::rgb(1.0, 0.35, 0.0).into()),
-        materials.add(Color::rgb(1.0, 0.60, 0.0).into()),
-        materials.add(Color::rgb(1.0, 0.81, 0.0).into()),
-        materials.add(Color::rgb(1.0, 0.91, 0.03).into()),
+        materials.add(Color::rgb(0.36, 0.43, 1.00).into()),
+        materials.add(Color::rgb(0.37, 0.80, 0.89).into()),
+        materials.add(Color::rgb(0.67, 0.20, 0.20).into()),
+        materials.add(Color::rgb(0.27, 0.16, 0.16).into()),
+        materials.add(Color::rgb(0.86, 0.90, 0.99).into()),
+        materials.add(Color::rgb(0.47, 0.53, 0.55).into()),
     ]));
 }
 

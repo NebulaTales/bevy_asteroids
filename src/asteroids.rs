@@ -351,9 +351,9 @@ fn startup(
     commands.insert_resource(SaucerParticleColors(vec![
         materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
         materials.add(Color::rgb(1.0, 0.35, 0.0).into()),
-        materials.add(Color::rgb(1.0, 0.60, 0.0).into()),
-        materials.add(Color::rgb(1.0, 0.81, 0.0).into()),
-        materials.add(Color::rgb(1.0, 0.91, 0.03).into()),
+        materials.add(Color::rgb(1.0, 1.0, 1.0).into()),
+        materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+        materials.add(Color::rgb(1.0, 1.0, 1.0).into()),
     ]));
 }
 
