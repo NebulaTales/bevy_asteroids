@@ -4,6 +4,7 @@ use crate::{
     PLAYER,
 };
 use rand::prelude::*;
+use std::collections::HashSet;
 
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
@@ -43,14 +44,13 @@ fn destroy_on_collision(
     q_player: Query<(Entity, &Velocity, &Transform), With<Player>>,
 ) {
     let mut rng = thread_rng();
-    let mut already_done = false;
+    let mut already_done = HashSet::new();
     for collision in events.iter() {
         if let Ok((e, ship_velocity, ship_transform)) = q_player.get(collision.source) {
-            assert!(
-                !already_done,
-                "This prooves the ship collided more than once!!!"
-            );
-            already_done = true;
+            if already_done.contains(&e) {
+                continue;
+            }
+            already_done.insert(e);
 
             commands.entity(e).despawn();
             commands.spawn().insert(SpawnPlayer::default());
