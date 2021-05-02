@@ -8,7 +8,7 @@ use bevy::{
     core::{Time, Timer},
     ecs::{
         entity::Entity,
-        query::With,
+        query::{With, Without},
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     math::Vec2,
@@ -20,15 +20,8 @@ use bevy::{
 use rand::prelude::*;
 use std::time::Duration;
 
-pub struct Firing {
-    time_span: Option<Timer>,
-}
-
-impl Default for Firing {
-    fn default() -> Self {
-        Firing { time_span: None }
-    }
-}
+pub struct Firing;
+pub struct FireCooldown(Timer);
 
 const FLOOR_SPEED: f32 = 200.0;
 const INITIAL_SPEED: f32 = 500.0;
@@ -51,20 +44,45 @@ fn destroy_on_collision(
     }
 }
 
+fn remove_cooldown(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut FireCooldown), Without<Firing>>,
+) {
+    for (e, mut cooldown) in query.iter_mut() {
+        if cooldown.0.tick(time.delta()).just_finished() {
+            commands.entity(e).remove::<FireCooldown>();
+        }
+    }
+}
+
 pub fn spawn_fires(
     mut commands: Commands,
     time: Res<Time>,
     colors: Res<FireColors>,
-    mut query: Query<(&mut Firing, &Transform, Option<&Velocity>)>,
+    mut query: Query<
+        (
+            Entity,
+            &Transform,
+            Option<&Velocity>,
+            Option<&mut FireCooldown>,
+        ),
+        With<Firing>,
+    >,
 ) {
     let mut rng = thread_rng();
 
-    for (mut spawner, transform, spawner_velocity) in query.iter_mut() {
-        let fire = if let Some(time_span) = &mut spawner.time_span {
-            time_span.tick(time.delta()).just_finished()
-        } else {
-            spawner.time_span = Some(Timer::new(Duration::from_millis(PEW_PEW_SPEED), true));
-            true
+    for (e, transform, spawner_velocity, fire_cooldown) in query.iter_mut() {
+        let fire = {
+            if let Some(mut fire_cooldown) = fire_cooldown {
+                fire_cooldown.0.tick(time.delta()).just_finished()
+            } else {
+                commands.entity(e).insert(FireCooldown(Timer::new(
+                    Duration::from_millis(PEW_PEW_SPEED),
+                    true,
+                )));
+                true
+            }
         };
 
         if fire {
@@ -125,6 +143,7 @@ impl Plugin for FirePlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
             .add_system(spawn_fires.system())
+            .add_system(remove_cooldown.system())
             .add_system(destroy_on_collision.system());
     }
 }

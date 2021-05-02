@@ -58,7 +58,7 @@ pub fn fire(
 ) {
     if keyboard.just_pressed(KeyCode::Space) {
         for entity in query.iter_mut() {
-            commands.entity(entity).insert(Firing::default());
+            commands.entity(entity).insert(Firing);
         }
     }
 
