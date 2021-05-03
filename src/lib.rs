@@ -48,6 +48,11 @@ impl Default for Shape2D {
 
 struct BasePlugin;
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+enum AppState {
+    Game,
+}
+
 pub fn game(mut commands: Commands) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
@@ -56,7 +61,8 @@ pub fn game(mut commands: Commands) {
 
 impl Plugin for BasePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(game.system());
+        app.add_state(AppState::Game)
+            .add_startup_system(game.system());
     }
 }
 

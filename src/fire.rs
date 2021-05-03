@@ -1,6 +1,6 @@
 use crate::{
-    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap, AMMO,
-    OBSTACLE,
+    AppState, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap,
+    AMMO, OBSTACLE,
 };
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
@@ -9,6 +9,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         query::{With, Without},
+        schedule::SystemSet,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     math::Vec2,
@@ -141,9 +142,11 @@ pub struct FirePlugin;
 
 impl Plugin for FirePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system())
-            .add_system(spawn_fires.system())
-            .add_system(remove_cooldown.system())
-            .add_system(destroy_on_collision.system());
+        app.add_startup_system(startup.system()).add_system_set(
+            SystemSet::on_update(AppState::Game)
+                .with_system(spawn_fires.system())
+                .with_system(remove_cooldown.system())
+                .with_system(destroy_on_collision.system()),
+        );
     }
 }

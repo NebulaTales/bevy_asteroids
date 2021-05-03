@@ -12,11 +12,12 @@
 /// `CollisionMask` component) and a _target_ (the one with a `CollisionLayer`),
 /// a `CollisionEvent` event is emitted that can be used within other systems.
 ///
-use crate::{Ghost, Shape2D};
+use crate::{AppState, Ghost, Shape2D};
 use bevy::{
     app::{AppBuilder, EventWriter, Plugin},
     ecs::{
         entity::Entity,
+        schedule::SystemSet,
         system::{IntoSystem, Query},
     },
     math::Vec2,
@@ -122,7 +123,8 @@ fn transform_based_check(
 pub struct CollisionPlugin;
 impl Plugin for CollisionPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_event::<CollisionEvent>()
-            .add_system(transform_based_check.system());
+        app.add_event::<CollisionEvent>().add_system_set(
+            SystemSet::on_update(AppState::Game).with_system(transform_based_check.system()),
+        );
     }
 }

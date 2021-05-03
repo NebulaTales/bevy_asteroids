@@ -1,7 +1,7 @@
 use crate::{
-    Acceleration, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, ControlLocked, Fire,
-    Friction, PlayerControlled, PlayerLifes, Shape2D, Thrust, Velocity, Wrap, AMMO, OBSTACLE,
-    PLAYER,
+    Acceleration, AppState, Collider2D, CollisionEvent, CollisionLayer, CollisionMask,
+    ControlLocked, Fire, Friction, PlayerControlled, PlayerLifes, Shape2D, Thrust, Velocity, Wrap,
+    AMMO, OBSTACLE, PLAYER,
 };
 use rand::prelude::*;
 use std::collections::HashSet;
@@ -13,6 +13,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         query::{Added, With},
+        schedule::SystemSet,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     math::{Vec2, Vec3},
@@ -212,10 +213,12 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system())
-            .add_system(spawn_player.system())
-            .add_system(remove_immunity.system())
-            .add_system(new_immunity.system())
-            .add_system(destroy_on_collision.system());
+        app.add_startup_system(startup.system()).add_system_set(
+            SystemSet::on_update(AppState::Game)
+                .with_system(spawn_player.system())
+                .with_system(remove_immunity.system())
+                .with_system(new_immunity.system())
+                .with_system(destroy_on_collision.system()),
+        );
     }
 }

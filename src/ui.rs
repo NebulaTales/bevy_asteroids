@@ -1,4 +1,4 @@
-use crate::{NoWrapProtection, PlayerLifes, Score, WrapCamera, PLAYER_LIFES_MAX};
+use crate::{AppState, NoWrapProtection, PlayerLifes, Score, WrapCamera, PLAYER_LIFES_MAX};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::{AssetServer, Assets},
@@ -6,6 +6,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         query::With,
+        schedule::SystemSet,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     math::{Rect, Vec2, Vec3},
@@ -146,9 +147,11 @@ pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system())
-            .add_system(despawn_life_tokens.system())
-            .add_system(update_lifes_count.system())
-            .add_system(position_life_tokens.system());
+        app.add_startup_system(startup.system()).add_system_set(
+            SystemSet::on_update(AppState::Game)
+                .with_system(despawn_life_tokens.system())
+                .with_system(update_lifes_count.system())
+                .with_system(position_life_tokens.system()),
+        );
     }
 }

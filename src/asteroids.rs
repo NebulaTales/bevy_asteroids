@@ -1,7 +1,7 @@
 use crate::{
-    Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Fire, NoWrapProtection, Score,
-    Shape2D, Velocity, Wrap, WrapCamera, AMMO, OBSTACLE, PLAYER, SCORE_BIG_ASTEROID, SCORE_SAUCER,
-    SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
+    AppState, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Fire, NoWrapProtection,
+    Score, Shape2D, Velocity, Wrap, WrapCamera, AMMO, OBSTACLE, PLAYER, SCORE_BIG_ASTEROID,
+    SCORE_SAUCER, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
 use rand::prelude::*;
 use std::{collections::HashSet, time::Duration};
@@ -13,6 +13,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         query::With,
+        schedule::SystemSet,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
     input::{keyboard::KeyCode, Input},
@@ -377,12 +378,14 @@ fn startup(
 
 impl Plugin for AsteroidsPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system())
-            .add_system(timed_spawn.system())
-            .add_system(saucer_timed_spawn.system())
-            .add_system(spawn.system())
-            .add_system(toggle_timed_spawn.system())
-            .add_system(spawn_radius.system())
-            .add_system(destroy_on_collision.system());
+        app.add_startup_system(startup.system()).add_system_set(
+            SystemSet::on_update(AppState::Game)
+                .with_system(timed_spawn.system())
+                .with_system(saucer_timed_spawn.system())
+                .with_system(spawn.system())
+                .with_system(toggle_timed_spawn.system())
+                .with_system(spawn_radius.system())
+                .with_system(destroy_on_collision.system()),
+        );
     }
 }

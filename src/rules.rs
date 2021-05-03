@@ -1,7 +1,10 @@
-use crate::Score;
+use crate::{AppState, Score};
 use bevy::{
     app::{AppBuilder, AppExit, Events, Plugin},
-    ecs::system::{Commands, IntoSystem, Res, ResMut},
+    ecs::{
+        schedule::SystemSet,
+        system::{Commands, IntoSystem, Res, ResMut},
+    },
 };
 
 pub const PLAYER_LIFES_MAX: u8 = 3;
@@ -30,6 +33,6 @@ fn game_over(lifes: Res<PlayerLifes>, score: Res<Score>, mut signal: ResMut<Even
 impl Plugin for RulesPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(startup.system())
-            .add_system(game_over.system());
+            .add_system_set(SystemSet::on_update(AppState::Game).with_system(game_over.system()));
     }
 }

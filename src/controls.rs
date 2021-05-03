@@ -1,12 +1,13 @@
 use crate::{
     movement::{Acceleration, Thrust},
-    Firing, Wrap,
+    AppState, Firing, Wrap,
 };
 use bevy::{
     app::{AppBuilder, Plugin},
     ecs::{
         entity::Entity,
         query::{With, Without},
+        schedule::SystemSet,
         system::{Commands, IntoSystem, Query, Res},
     },
     input::{keyboard::KeyCode, Input},
@@ -90,9 +91,12 @@ pub fn debug(
 pub struct ControlsPlugin;
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(thrust_up_down.system())
-            .add_system(thrust_left_right.system())
-            .add_system(fire.system())
-            .add_system(debug.system());
+        app.add_system_set(
+            SystemSet::on_update(AppState::Game)
+                .with_system(thrust_up_down.system())
+                .with_system(thrust_left_right.system())
+                .with_system(fire.system())
+                .with_system(debug.system()),
+        );
     }
 }

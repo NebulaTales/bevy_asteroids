@@ -1,4 +1,4 @@
-use crate::{CollisionLayer, CollisionMask};
+use crate::{AppState, CollisionLayer, CollisionMask};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::{Assets, Handle},
@@ -6,7 +6,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         query::{With, Without},
-        schedule::{ParallelSystemDescriptorCoercion, SystemLabel},
+        schedule::{ParallelSystemDescriptorCoercion, SystemLabel, SystemSet},
         system::{Commands, IntoSystem, Query, Res},
     },
     math::{Quat, Vec2, Vec3},
@@ -674,48 +674,51 @@ pub struct WrapPlugin;
 
 impl Plugin for WrapPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system(teleport_wrapped.system().label(Label::Teleport))
-            .add_system(
-                teleport_wrap_non_wrapped_sprite
-                    .system()
-                    .label(Label::Teleport),
-            )
-            .add_system(
-                teleport_wrap_non_wrapped_sprite_atlas
-                    .system()
-                    .label(Label::Teleport),
-            )
-            .add_system(
-                spawn_ghosts_sprite
-                    .system()
-                    .label(Label::Spawn)
-                    .after(Label::Teleport),
-            )
-            .add_system(
-                spawn_ghosts_sprite_atlas
-                    .system()
-                    .label(Label::Spawn)
-                    .after(Label::Teleport),
-            )
-            .add_system(
-                make_ghost_transforms
-                    .system()
-                    .label(Label::Make)
-                    .after(Label::Spawn),
-            )
-            .add_system(
-                make_ghost_sprite_index
-                    .system()
-                    .label(Label::Make)
-                    .after(Label::Spawn),
-            )
-            .add_system(set_ghost_transforms.system().after(Label::Make))
-            .add_system(set_ghost_sprite_index.system().after(Label::Make))
-            .add_system(despawn_ghosts_indirect.system())
-            .add_system(despawn_ghosts_direct_sprite.system())
-            .add_system(despawn_ghosts_direct_sprite_atlas.system())
-            .add_system(auto_unwrap.system())
-            .add_system(despawn_unwrapped_sprite.system())
-            .add_system(despawn_unwrapped_sprite_atlas.system());
+        app.add_system_set(
+            SystemSet::on_update(AppState::Game)
+                .with_system(teleport_wrapped.system().label(Label::Teleport))
+                .with_system(
+                    teleport_wrap_non_wrapped_sprite
+                        .system()
+                        .label(Label::Teleport),
+                )
+                .with_system(
+                    teleport_wrap_non_wrapped_sprite_atlas
+                        .system()
+                        .label(Label::Teleport),
+                )
+                .with_system(
+                    spawn_ghosts_sprite
+                        .system()
+                        .label(Label::Spawn)
+                        .after(Label::Teleport),
+                )
+                .with_system(
+                    spawn_ghosts_sprite_atlas
+                        .system()
+                        .label(Label::Spawn)
+                        .after(Label::Teleport),
+                )
+                .with_system(
+                    make_ghost_transforms
+                        .system()
+                        .label(Label::Make)
+                        .after(Label::Spawn),
+                )
+                .with_system(
+                    make_ghost_sprite_index
+                        .system()
+                        .label(Label::Make)
+                        .after(Label::Spawn),
+                )
+                .with_system(set_ghost_transforms.system().after(Label::Make))
+                .with_system(set_ghost_sprite_index.system().after(Label::Make))
+                .with_system(despawn_ghosts_indirect.system())
+                .with_system(despawn_ghosts_direct_sprite.system())
+                .with_system(despawn_ghosts_direct_sprite_atlas.system())
+                .with_system(auto_unwrap.system())
+                .with_system(despawn_unwrapped_sprite.system())
+                .with_system(despawn_unwrapped_sprite_atlas.system()),
+        );
     }
 }
