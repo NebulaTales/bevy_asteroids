@@ -166,7 +166,7 @@ fn timed_spawn(
     if timer.1 && timer.0.tick(time.delta()).just_finished() {
         timer
             .0
-            .set_duration(Duration::from_secs(rng.gen_range(1..15)));
+            .set_duration(Duration::from_secs(rng.gen_range(1..5)));
         if let Ok(projection) = q_projection.single() {
             let diameter = Size::new(
                 projection.right - projection.left,
