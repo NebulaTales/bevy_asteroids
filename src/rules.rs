@@ -2,7 +2,7 @@ use crate::{AppState, Score};
 use bevy::{
     app::{AppBuilder, AppExit, Events, Plugin},
     ecs::{
-        schedule::SystemSet,
+        schedule::{State, SystemSet},
         system::{Commands, IntoSystem, Res, ResMut},
     },
 };
@@ -23,10 +23,16 @@ pub fn startup(mut commands: Commands) {
     commands.insert_resource(PlayerLifes::default());
 }
 
-fn game_over(lifes: Res<PlayerLifes>, score: Res<Score>, mut signal: ResMut<Events<AppExit>>) {
+fn game_over(
+    mut state: ResMut<State<AppState>>,
+    lifes: Res<PlayerLifes>,
+    score: Res<Score>,
+    _: ResMut<Events<AppExit>>,
+) {
     if lifes.0 == 0 {
         dbg!(*score);
-        signal.send(AppExit);
+        //signal.send(AppExit);
+        state.pop().unwrap();
     }
 }
 

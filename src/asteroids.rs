@@ -343,7 +343,7 @@ fn destroy_on_collision(
 
 pub struct AsteroidsPlugin;
 
-fn startup(
+fn prepare_resources(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
@@ -378,14 +378,15 @@ fn startup(
 
 impl Plugin for AsteroidsPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system()).add_system_set(
-            SystemSet::on_update(AppState::Game)
-                .with_system(timed_spawn.system())
-                .with_system(saucer_timed_spawn.system())
-                .with_system(spawn.system())
-                .with_system(toggle_timed_spawn.system())
-                .with_system(spawn_radius.system())
-                .with_system(destroy_on_collision.system()),
-        );
+        app.add_startup_system(prepare_resources.system())
+            .add_system_set(
+                SystemSet::on_update(AppState::Game)
+                    .with_system(timed_spawn.system())
+                    .with_system(saucer_timed_spawn.system())
+                    .with_system(spawn.system())
+                    .with_system(toggle_timed_spawn.system())
+                    .with_system(spawn_radius.system())
+                    .with_system(destroy_on_collision.system()),
+            );
     }
 }

@@ -70,24 +70,6 @@ pub fn fire(
     }
 }
 
-pub fn debug(
-    mut commands: Commands,
-    keyboard: Res<Input<KeyCode>>,
-    query: Query<Entity, With<Wrap>>,
-) {
-    let kill = keyboard.just_pressed(KeyCode::K);
-    let unwrap = keyboard.just_pressed(KeyCode::U);
-
-    for entity in query.iter() {
-        if kill {
-            commands.entity(entity).despawn();
-        }
-        if unwrap {
-            commands.entity(entity).remove::<Wrap>();
-        }
-    }
-}
-
 pub struct ControlsPlugin;
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut AppBuilder) {
@@ -95,8 +77,7 @@ impl Plugin for ControlsPlugin {
             SystemSet::on_update(AppState::Game)
                 .with_system(thrust_up_down.system())
                 .with_system(thrust_left_right.system())
-                .with_system(fire.system())
-                .with_system(debug.system()),
+                .with_system(fire.system()),
         );
     }
 }

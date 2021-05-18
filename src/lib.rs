@@ -13,6 +13,7 @@ mod movement;
 mod player;
 mod rules;
 mod score;
+mod title;
 mod ui;
 mod wrap;
 
@@ -26,6 +27,7 @@ pub use rules::{PlayerLifes, RulesPlugin, PLAYER_LIFES_MAX};
 pub use score::{
     Score, ScorePlugin, SCORE_BIG_ASTEROID, SCORE_SAUCER, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
+pub use title::TitlePlugin;
 pub use ui::UIPlugin;
 pub use wrap::{Ghost, NoWrapProtection, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
@@ -46,12 +48,14 @@ impl Default for Shape2D {
     }
 }
 
-struct BasePlugin;
-
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 enum AppState {
+    Title,
     Game,
 }
+
+//////////////////////////////////////////////////////////////////////////////
+struct BasePlugin;
 
 pub fn game(mut commands: Commands) {
     commands
@@ -61,10 +65,10 @@ pub fn game(mut commands: Commands) {
 
 impl Plugin for BasePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_state(AppState::Game)
-            .add_startup_system(game.system());
+        app.add_startup_system(game.system());
     }
 }
+//////////////////////////////////////////////////////////////////////////////
 
 impl PluginGroup for AsteroidsGamePlugins {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
@@ -79,5 +83,6 @@ impl PluginGroup for AsteroidsGamePlugins {
         group.add(ScorePlugin);
         group.add(UIPlugin);
         group.add(WrapPlugin);
+        group.add(TitlePlugin);
     }
 }
