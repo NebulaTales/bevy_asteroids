@@ -184,7 +184,7 @@ fn spawn_player(
     }
 }
 
-pub fn startup(
+pub fn prepare_resources(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
@@ -197,8 +197,6 @@ pub fn startup(
         1,
     ))));
 
-    commands.spawn().insert(SpawnPlayer::default());
-
     commands.insert_resource(PlayerColors(vec![
         materials.add(Color::rgb(0.36, 0.43, 1.00).into()),
         materials.add(Color::rgb(0.37, 0.80, 0.89).into()),
@@ -209,16 +207,29 @@ pub fn startup(
     ]));
 }
 
+fn enter(mut commands: Commands) {
+    commands.spawn().insert(SpawnPlayer::default());
+}
+
+fn exit(mut commands: Commands, query: Query<Entity, With<Player>>) {
+    for e in query.iter() {
+        commands.entity(e).despawn();
+    }
+}
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system()).add_system_set(
-            SystemSet::on_update(AppState::Game)
-                .with_system(spawn_player.system())
-                .with_system(remove_immunity.system())
-                .with_system(new_immunity.system())
-                .with_system(destroy_on_collision.system()),
-        );
+        app.add_startup_system(prepare_resources.system())
+            .add_system_set(
+                SystemSet::on_update(AppState::Game)
+                    .with_system(spawn_player.system())
+                    .with_system(remove_immunity.system())
+                    .with_system(new_immunity.system())
+                    .with_system(destroy_on_collision.system()),
+            )
+            .add_system_set(SystemSet::on_enter(AppState::Game).with_system(enter.system()))
+            .add_system_set(SystemSet::on_exit(AppState::Game).with_system(exit.system()));
     }
 }

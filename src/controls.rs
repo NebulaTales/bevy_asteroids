@@ -1,6 +1,6 @@
 use crate::{
     movement::{Acceleration, Thrust},
-    AppState, Firing, Wrap,
+    AppState, Firing,
 };
 use bevy::{
     app::{AppBuilder, Plugin},

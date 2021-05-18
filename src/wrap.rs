@@ -598,6 +598,12 @@ fn auto_unwrap(mut commands: Commands, time: Res<Time>, mut query: Query<(Entity
     }
 }
 
+fn unwrap_everything(mut commands: Commands, query: Query<Entity, With<Wrap>>) {
+    for e in query.iter() {
+        commands.entity(e).remove::<Wrap>();
+    }
+}
+
 fn make_ghost_sprite_index(
     q_targets: Query<(Entity, &TextureAtlasSprite)>,
     mut q_ghosts: Query<&mut Ghost>,
@@ -674,51 +680,51 @@ pub struct WrapPlugin;
 
 impl Plugin for WrapPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system_set(
-            SystemSet::on_update(AppState::Game)
-                .with_system(teleport_wrapped.system().label(Label::Teleport))
-                .with_system(
-                    teleport_wrap_non_wrapped_sprite
-                        .system()
-                        .label(Label::Teleport),
-                )
-                .with_system(
-                    teleport_wrap_non_wrapped_sprite_atlas
-                        .system()
-                        .label(Label::Teleport),
-                )
-                .with_system(
-                    spawn_ghosts_sprite
-                        .system()
-                        .label(Label::Spawn)
-                        .after(Label::Teleport),
-                )
-                .with_system(
-                    spawn_ghosts_sprite_atlas
-                        .system()
-                        .label(Label::Spawn)
-                        .after(Label::Teleport),
-                )
-                .with_system(
-                    make_ghost_transforms
-                        .system()
-                        .label(Label::Make)
-                        .after(Label::Spawn),
-                )
-                .with_system(
-                    make_ghost_sprite_index
-                        .system()
-                        .label(Label::Make)
-                        .after(Label::Spawn),
-                )
-                .with_system(set_ghost_transforms.system().after(Label::Make))
-                .with_system(set_ghost_sprite_index.system().after(Label::Make))
-                .with_system(despawn_ghosts_indirect.system())
-                .with_system(despawn_ghosts_direct_sprite.system())
-                .with_system(despawn_ghosts_direct_sprite_atlas.system())
-                .with_system(auto_unwrap.system())
-                .with_system(despawn_unwrapped_sprite.system())
-                .with_system(despawn_unwrapped_sprite_atlas.system()),
-        );
+        app.add_system(teleport_wrapped.system().label(Label::Teleport))
+            .add_system(
+                teleport_wrap_non_wrapped_sprite
+                    .system()
+                    .label(Label::Teleport),
+            )
+            .add_system(
+                teleport_wrap_non_wrapped_sprite_atlas
+                    .system()
+                    .label(Label::Teleport),
+            )
+            .add_system(
+                spawn_ghosts_sprite
+                    .system()
+                    .label(Label::Spawn)
+                    .after(Label::Teleport),
+            )
+            .add_system(
+                spawn_ghosts_sprite_atlas
+                    .system()
+                    .label(Label::Spawn)
+                    .after(Label::Teleport),
+            )
+            .add_system(
+                make_ghost_transforms
+                    .system()
+                    .label(Label::Make)
+                    .after(Label::Spawn),
+            )
+            .add_system(
+                make_ghost_sprite_index
+                    .system()
+                    .label(Label::Make)
+                    .after(Label::Spawn),
+            )
+            .add_system(set_ghost_transforms.system().after(Label::Make))
+            .add_system(set_ghost_sprite_index.system().after(Label::Make))
+            .add_system(despawn_ghosts_indirect.system())
+            .add_system(despawn_ghosts_direct_sprite.system())
+            .add_system(despawn_ghosts_direct_sprite_atlas.system())
+            .add_system(auto_unwrap.system())
+            .add_system(despawn_unwrapped_sprite.system())
+            .add_system(despawn_unwrapped_sprite_atlas.system())
+            .add_system_set(
+                SystemSet::on_exit(AppState::Game).with_system(unwrap_everything.system()),
+            );
     }
 }

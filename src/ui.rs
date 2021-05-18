@@ -5,7 +5,7 @@ use bevy::{
     core::{Time, Timer},
     ecs::{
         entity::Entity,
-        query::With,
+        query::{Or, With},
         schedule::SystemSet,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
@@ -28,6 +28,12 @@ struct LifeToken(u8);
 struct LifeTokenAnimDelay(Timer);
 
 const TOKEN_MARGIN: f32 = 25.0;
+
+#[derive(Default)]
+struct ScoreCounter {
+    _highscore: bool,
+}
+
 // For now position according to cursor
 fn position_life_tokens(
     mut q_tokens: Query<(&LifeToken, &mut Transform)>,
@@ -79,7 +85,7 @@ fn update_lifes_count(score: Res<Score>, mut q: Query<&mut Text, With<ScoreCount
     }
 }
 
-fn startup(
+fn create_ui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
@@ -138,20 +144,23 @@ fn startup(
         .insert(ScoreCounter::default());
 }
 
-#[derive(Default)]
-struct ScoreCounter {
-    _highscore: bool,
+fn dispose_ui(mut commands: Commands, tokens: Query<Entity, With<LifeToken>>) {
+    for e in tokens.iter() {
+        commands.entity(e).despawn();
+    }
 }
 
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system()).add_system_set(
+        app.add_system_set(
             SystemSet::on_update(AppState::Game)
                 .with_system(despawn_life_tokens.system())
                 .with_system(update_lifes_count.system())
                 .with_system(position_life_tokens.system()),
-        );
+        )
+        .add_system_set(SystemSet::on_enter(AppState::Game).with_system(create_ui.system()))
+        .add_system_set(SystemSet::on_exit(AppState::Game).with_system(dispose_ui.system()));
     }
 }

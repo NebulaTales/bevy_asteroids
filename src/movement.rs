@@ -1,11 +1,7 @@
-use crate::AppState;
 use bevy::{
     app::{AppBuilder, Plugin},
     core::Time,
-    ecs::{
-        schedule::SystemSet,
-        system::{IntoSystem, Query, Res},
-    },
+    ecs::system::{IntoSystem, Query, Res},
     math::{Quat, Vec2},
     transform::components::Transform,
 };
@@ -115,12 +111,9 @@ pub struct MovementPlugin;
 
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system_set(
-            SystemSet::on_update(AppState::Game)
-                .with_system(acceleration.system())
-                .with_system(floor_velocity.system())
-                .with_system(velocity.system())
-                .with_system(friction.system()),
-        );
+        app.add_system(acceleration.system())
+            .add_system(floor_velocity.system())
+            .add_system(velocity.system())
+            .add_system(friction.system());
     }
 }

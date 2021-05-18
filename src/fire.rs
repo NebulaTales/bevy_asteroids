@@ -127,7 +127,7 @@ pub fn spawn_fires(
     }
 }
 
-fn startup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+fn prepare_resources(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
     // Added the palette of fire colors
     commands.insert_resource(FireColors(vec![
         materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
@@ -142,11 +142,12 @@ pub struct FirePlugin;
 
 impl Plugin for FirePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system()).add_system_set(
-            SystemSet::on_update(AppState::Game)
-                .with_system(spawn_fires.system())
-                .with_system(remove_cooldown.system())
-                .with_system(destroy_on_collision.system()),
-        );
+        app.add_startup_system(prepare_resources.system())
+            .add_system_set(
+                SystemSet::on_update(AppState::Game)
+                    .with_system(spawn_fires.system())
+                    .with_system(remove_cooldown.system())
+                    .with_system(destroy_on_collision.system()),
+            );
     }
 }

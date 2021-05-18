@@ -1,6 +1,10 @@
+use crate::AppState;
 use bevy::{
     app::{AppBuilder, Plugin},
-    ecs::system::{Commands, IntoSystem},
+    ecs::{
+        schedule::SystemSet,
+        system::{Commands, IntoSystem, ResMut},
+    },
 };
 
 pub const SCORE_BIG_ASTEROID: u16 = 5;
@@ -36,8 +40,13 @@ pub fn startup(mut commands: Commands) {
     commands.insert_resource(Score::default());
 }
 
+pub fn reset_score(mut score: ResMut<Score>) {
+    score.current = 0;
+}
+
 impl Plugin for ScorePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system());
+        app.add_startup_system(startup.system())
+            .add_system_set(SystemSet::on_enter(AppState::Game).with_system(reset_score.system()));
     }
 }

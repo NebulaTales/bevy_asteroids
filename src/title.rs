@@ -1,7 +1,6 @@
 use crate::AppState;
 use bevy::{
     app::{AppBuilder, Plugin},
-    core::Time,
     ecs::{
         schedule::State,
         schedule::SystemSet,
@@ -12,7 +11,7 @@ use bevy::{
 
 pub struct TitlePlugin;
 
-fn launch_game(time: Res<Time>, keyboard: Res<Input<KeyCode>>, mut state: ResMut<State<AppState>>) {
+fn launch_game(keyboard: Res<Input<KeyCode>>, mut state: ResMut<State<AppState>>) {
     if keyboard.just_released(KeyCode::Return) {
         state.push(AppState::Game).unwrap();
     }

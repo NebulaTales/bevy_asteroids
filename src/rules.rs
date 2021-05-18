@@ -19,8 +19,12 @@ impl Default for PlayerLifes {
 
 pub struct RulesPlugin;
 
-pub fn startup(mut commands: Commands) {
+pub fn initialize_lifes(mut commands: Commands) {
     commands.insert_resource(PlayerLifes::default());
+}
+
+pub fn remove_lifes(mut commands: Commands) {
+    commands.remove_resource::<PlayerLifes>();
 }
 
 fn game_over(
@@ -29,6 +33,7 @@ fn game_over(
     score: Res<Score>,
     _: ResMut<Events<AppExit>>,
 ) {
+    dbg!(lifes.0);
     if lifes.0 == 0 {
         dbg!(*score);
         //signal.send(AppExit);
@@ -38,7 +43,10 @@ fn game_over(
 
 impl Plugin for RulesPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(startup.system())
-            .add_system_set(SystemSet::on_update(AppState::Game).with_system(game_over.system()));
+        app.add_system_set(SystemSet::on_update(AppState::Game).with_system(game_over.system()))
+            .add_system_set(
+                SystemSet::on_enter(AppState::Game).with_system(initialize_lifes.system()),
+            )
+            .add_system_set(SystemSet::on_exit(AppState::Game).with_system(remove_lifes.system()));
     }
 }
