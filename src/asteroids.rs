@@ -12,11 +12,10 @@ use bevy::{
     core::{Time, Timer},
     ecs::{
         entity::Entity,
-        query::With,
+        query::{Or, With},
         schedule::SystemSet,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
-    input::{keyboard::KeyCode, Input},
     math::Size,
     math::{Vec2, Vec3},
     render::{camera::OrthographicProjection, color::Color},
@@ -147,13 +146,6 @@ fn spawn_radius(mut commands: Commands, q_spawn: Query<(Entity, &SpawnRadius)>) 
                 asteroid: spawn.asteroid,
                 spin: rng.gen_range(-5.0_f32..5.0_f32),
             });
-    }
-}
-
-fn toggle_timed_spawn(keyboard: Res<Input<KeyCode>>, mut timer: ResMut<SpawnTimer>) {
-    if keyboard.just_pressed(KeyCode::A) {
-        timer.1 = !timer.1;
-        dbg!(timer.1);
     }
 }
 
@@ -356,9 +348,6 @@ fn prepare_resources(
         5,
     ))));
 
-    commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true), true));
-    commands.insert_resource(SaucerTimer(Timer::from_seconds(10.0, true)));
-
     commands.insert_resource(ParticleColors(vec![
         materials.add(Color::rgb(0.18, 0.18, 0.18).into()),
         materials.add(Color::rgb(0.23, 0.20, 0.20).into()),
@@ -376,15 +365,34 @@ fn prepare_resources(
     ]));
 }
 
+fn enter(mut commands: Commands, query: Query<Entity, With<Asteroid>>) {
+    commands.insert_resource(SpawnTimer(Timer::from_seconds(1.0, true), true));
+    commands.insert_resource(SaucerTimer(Timer::from_seconds(10.0, true)));
+
+    for e in query.iter() {
+        commands.entity(e).despawn();
+    }
+}
+
+fn exit(mut commands: Commands, query: Query<Entity, Or<(With<Spawn>, With<SpawnRadius>)>>) {
+    commands.remove_resource::<SpawnTimer>();
+    commands.remove_resource::<SaucerTimer>();
+
+    for e in query.iter() {
+        commands.entity(e).despawn();
+    }
+}
+
 impl Plugin for AsteroidsPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(prepare_resources.system())
+            .add_system_set(SystemSet::on_enter(AppState::Game).with_system(enter.system()))
+            .add_system_set(SystemSet::on_exit(AppState::Game).with_system(exit.system()))
             .add_system_set(
                 SystemSet::on_update(AppState::Game)
                     .with_system(timed_spawn.system())
                     .with_system(saucer_timed_spawn.system())
                     .with_system(spawn.system())
-                    .with_system(toggle_timed_spawn.system())
                     .with_system(spawn_radius.system())
                     .with_system(destroy_on_collision.system()),
             );

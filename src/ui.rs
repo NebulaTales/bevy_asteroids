@@ -1,26 +1,17 @@
-use crate::{AppState, NoWrapProtection, PlayerLifes, Score, WrapCamera, PLAYER_LIFES_MAX};
+use crate::{AppState, NoWrapProtection, PlayerLifes, PlayerTexture, WrapCamera, PLAYER_LIFES_MAX};
 use bevy::{
     app::{AppBuilder, Plugin},
-    asset::{AssetServer, Assets},
     core::{Time, Timer},
     ecs::{
         entity::Entity,
-        query::{Or, With},
+        query::With,
         schedule::SystemSet,
-        system::{Commands, IntoSystem, Query, Res, ResMut},
+        system::{Commands, IntoSystem, Query, Res},
     },
-    math::{Rect, Vec2, Vec3},
-    render::{camera::OrthographicProjection, color::Color},
-    sprite::{entity::SpriteSheetBundle, TextureAtlas, TextureAtlasSprite},
-    text::{
-        prelude::{HorizontalAlign, VerticalAlign},
-        Text, TextAlignment, TextStyle,
-    },
+    math::Vec3,
+    render::camera::OrthographicProjection,
+    sprite::{entity::SpriteSheetBundle, TextureAtlasSprite},
     transform::components::Transform,
-    ui::{
-        entity::{TextBundle, UiCameraBundle},
-        PositionType, Style, Val,
-    },
 };
 use std::time::Duration;
 
@@ -28,11 +19,6 @@ struct LifeToken(u8);
 struct LifeTokenAnimDelay(Timer);
 
 const TOKEN_MARGIN: f32 = 25.0;
-
-#[derive(Default)]
-struct ScoreCounter {
-    _highscore: bool,
-}
 
 // For now position according to cursor
 fn position_life_tokens(
@@ -79,29 +65,11 @@ fn despawn_life_tokens(
     }
 }
 
-fn update_lifes_count(score: Res<Score>, mut q: Query<&mut Text, With<ScoreCounter>>) {
-    if let Ok(mut label) = q.single_mut() {
-        label.sections[0].value = score.current.to_string();
-    }
-}
-
-fn create_ui(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    // Create 3 mini ships sprites that will represent lifes
-    let texture_atlas = texture_atlases.add(TextureAtlas::from_grid(
-        asset_server.load("sprites/ship.png"),
-        Vec2::new(64.0, 64.0),
-        13,
-        1,
-    ));
-
+fn create_ui(mut commands: Commands, player_texture: Res<PlayerTexture>) {
     for life in 0..PLAYER_LIFES_MAX {
         commands
             .spawn_bundle(SpriteSheetBundle {
-                texture_atlas: texture_atlas.clone(),
+                texture_atlas: player_texture.0.clone(),
                 transform: Transform::from_scale(Vec3::new(0.5, 0.5, 1.0)),
                 sprite: TextureAtlasSprite {
                     index: 11,
@@ -112,40 +80,10 @@ fn create_ui(
             .insert(LifeToken(life))
             .insert(NoWrapProtection);
     }
-
-    commands.spawn_bundle(UiCameraBundle::default());
-    commands
-        // 2d camera
-        .spawn_bundle(TextBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                position: Rect {
-                    top: Val::Percent(0.0),
-                    left: Val::Percent(0.0),
-                    ..Default::default()
-                },
-
-                ..Default::default()
-            },
-            text: Text::with_section(
-                "0",
-                TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 60.0,
-                    color: Color::WHITE,
-                },
-                TextAlignment {
-                    vertical: VerticalAlign::Center,
-                    horizontal: HorizontalAlign::Center,
-                },
-            ),
-            ..Default::default()
-        })
-        .insert(ScoreCounter::default());
 }
 
-fn dispose_ui(mut commands: Commands, tokens: Query<Entity, With<LifeToken>>) {
-    for e in tokens.iter() {
+fn dispose_ui(mut commands: Commands, query: Query<Entity, With<LifeToken>>) {
+    for e in query.iter() {
         commands.entity(e).despawn();
     }
 }
@@ -157,7 +95,6 @@ impl Plugin for UIPlugin {
         app.add_system_set(
             SystemSet::on_update(AppState::Game)
                 .with_system(despawn_life_tokens.system())
-                .with_system(update_lifes_count.system())
                 .with_system(position_life_tokens.system()),
         )
         .add_system_set(SystemSet::on_enter(AppState::Game).with_system(create_ui.system()))

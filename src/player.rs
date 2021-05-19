@@ -12,7 +12,7 @@ use bevy::{
     core::{Time, Timer},
     ecs::{
         entity::Entity,
-        query::{Added, With},
+        query::{Added, Or, With},
         schedule::SystemSet,
         system::{Commands, IntoSystem, Query, Res, ResMut},
     },
@@ -27,7 +27,7 @@ use bevy::{
 
 struct Player;
 struct SpawnPlayer(Timer);
-struct SpawnTexture(Handle<TextureAtlas>);
+pub struct PlayerTexture(pub Handle<TextureAtlas>);
 struct Immunity {
     duration: Timer,
     animation: Timer,
@@ -154,7 +154,7 @@ fn new_immunity(
 fn spawn_player(
     mut commands: Commands,
     time: Res<Time>,
-    texture_atlas: Res<SpawnTexture>,
+    texture_atlas: Res<PlayerTexture>,
     mut q_spawn: Query<(Entity, &mut SpawnPlayer)>,
 ) {
     for (entity, mut spawn) in q_spawn.iter_mut() {
@@ -190,7 +190,7 @@ pub fn prepare_resources(
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.insert_resource(SpawnTexture(texture_atlases.add(TextureAtlas::from_grid(
+    commands.insert_resource(PlayerTexture(texture_atlases.add(TextureAtlas::from_grid(
         asset_server.load("sprites/ship.png"),
         Vec2::new(64.0, 64.0),
         13,
@@ -211,7 +211,7 @@ fn enter(mut commands: Commands) {
     commands.spawn().insert(SpawnPlayer::default());
 }
 
-fn exit(mut commands: Commands, query: Query<Entity, With<Player>>) {
+fn exit(mut commands: Commands, query: Query<Entity, Or<(With<Player>, With<SpawnPlayer>)>>) {
     for e in query.iter() {
         commands.entity(e).despawn();
     }

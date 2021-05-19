@@ -3,6 +3,7 @@ use bevy::{
     ecs::system::{Commands, IntoSystem},
     math::Vec2,
     render::entity::OrthographicCameraBundle,
+    ui::entity::UiCameraBundle,
 };
 
 mod asteroids;
@@ -22,7 +23,7 @@ pub use collision::{Collider2D, CollisionEvent, CollisionLayer, CollisionMask, C
 pub use controls::{ControlLocked, ControlsPlugin, PlayerControlled};
 pub use fire::{Fire, FirePlugin, Firing};
 pub use movement::{Acceleration, Friction, MovementPlugin, Thrust, Velocity};
-pub use player::PlayerPlugin;
+pub use player::{PlayerPlugin, PlayerTexture};
 pub use rules::{PlayerLifes, RulesPlugin, PLAYER_LIFES_MAX};
 pub use score::{
     Score, ScorePlugin, SCORE_BIG_ASTEROID, SCORE_SAUCER, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
@@ -61,6 +62,7 @@ pub fn game(mut commands: Commands) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(WrapCamera);
+    commands.spawn_bundle(UiCameraBundle::default());
 }
 
 impl Plugin for BasePlugin {

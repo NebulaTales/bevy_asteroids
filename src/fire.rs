@@ -138,11 +138,20 @@ fn prepare_resources(mut commands: Commands, mut materials: ResMut<Assets<ColorM
     ]));
 }
 
+fn despawn_all_fires(mut commands: Commands, query: Query<Entity, With<Fire>>) {
+    for e in query.iter() {
+        commands.entity(e).despawn();
+    }
+}
+
 pub struct FirePlugin;
 
 impl Plugin for FirePlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(prepare_resources.system())
+            .add_system_set(
+                SystemSet::on_enter(AppState::Game).with_system(despawn_all_fires.system()),
+            )
             .add_system_set(
                 SystemSet::on_update(AppState::Game)
                     .with_system(spawn_fires.system())
