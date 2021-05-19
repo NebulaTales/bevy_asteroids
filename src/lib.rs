@@ -28,7 +28,7 @@ pub use rules::{PlayerLifes, RulesPlugin, PLAYER_LIFES_MAX};
 pub use score::{
     Score, ScorePlugin, SCORE_BIG_ASTEROID, SCORE_SAUCER, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
-pub use title::TitlePlugin;
+pub use title::{GameFont, TitlePlugin};
 pub use ui::UIPlugin;
 pub use wrap::{Ghost, NoWrapProtection, Wrap, WrapCamera, WrapPlugin, Wrapped};
 
