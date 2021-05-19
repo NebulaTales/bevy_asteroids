@@ -1,6 +1,7 @@
 use crate::{AppState, NoWrapProtection, PlayerLifes, PlayerTexture, WrapCamera, PLAYER_LIFES_MAX};
 use bevy::{
     app::{AppBuilder, Plugin},
+    asset::{AssetServer, Handle},
     core::{Time, Timer},
     ecs::{
         entity::Entity,
@@ -11,6 +12,7 @@ use bevy::{
     math::Vec3,
     render::camera::OrthographicProjection,
     sprite::{entity::SpriteSheetBundle, TextureAtlasSprite},
+    text::Font,
     transform::components::Transform,
 };
 use std::time::Duration;
@@ -88,16 +90,22 @@ fn dispose_ui(mut commands: Commands, query: Query<Entity, With<LifeToken>>) {
     }
 }
 
+fn prepare_resources(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.insert_resource(GameFont(asset_server.load("fonts/FiraSans-Bold.ttf")));
+}
+
+pub struct GameFont(pub Handle<Font>);
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_system_set(
-            SystemSet::on_update(AppState::Game)
-                .with_system(despawn_life_tokens.system())
-                .with_system(position_life_tokens.system()),
-        )
-        .add_system_set(SystemSet::on_enter(AppState::Game).with_system(create_ui.system()))
-        .add_system_set(SystemSet::on_exit(AppState::Game).with_system(dispose_ui.system()));
+        app.add_startup_system(prepare_resources.system())
+            .add_system_set(
+                SystemSet::on_update(AppState::Game)
+                    .with_system(despawn_life_tokens.system())
+                    .with_system(position_life_tokens.system()),
+            )
+            .add_system_set(SystemSet::on_enter(AppState::Game).with_system(create_ui.system()))
+            .add_system_set(SystemSet::on_exit(AppState::Game).with_system(dispose_ui.system()));
     }
 }

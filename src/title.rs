@@ -1,7 +1,6 @@
-use crate::{AppState, Score};
+use crate::{AppState, GameFont, Score};
 use bevy::{
     app::{AppBuilder, Plugin},
-    asset::{AssetServer, Handle},
     ecs::{
         entity::Entity,
         query::With,
@@ -11,14 +10,13 @@ use bevy::{
     input::{keyboard::KeyCode, Input},
     math::Rect,
     render::color::Color,
-    text::{Font, Text, TextSection, TextStyle},
+    text::{Text, TextSection, TextStyle},
     ui::{entity::TextBundle, AlignSelf, PositionType, Style, Val},
 };
 
 pub struct TitlePlugin;
 
 struct Title;
-pub struct GameFont(pub Handle<Font>);
 
 fn launch_game(keyboard: Res<Input<KeyCode>>, mut state: ResMut<State<AppState>>) {
     if keyboard.just_released(KeyCode::Space) {
@@ -110,14 +108,9 @@ fn add_title(mut commands: Commands, font: Res<GameFont>) {
         .insert(Title);
 }
 
-fn prepare_resources(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(GameFont(asset_server.load("fonts/FiraSans-Bold.ttf")));
-}
-
 impl Plugin for TitlePlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_state(AppState::Title)
-            .add_startup_system(prepare_resources.system())
             .add_system_set(SystemSet::on_enter(AppState::Title).with_system(add_title.system()))
             .add_system_set(SystemSet::on_update(AppState::Title).with_system(launch_game.system()))
             .add_system_set(
