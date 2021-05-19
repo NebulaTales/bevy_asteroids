@@ -1,6 +1,6 @@
-use crate::{AppState, Score};
+use crate::AppState;
 use bevy::{
-    app::{AppBuilder, AppExit, Events, Plugin},
+    app::{AppBuilder, Plugin},
     ecs::{
         schedule::{State, SystemSet},
         system::{Commands, IntoSystem, Res, ResMut},
@@ -27,16 +27,8 @@ pub fn remove_lifes(mut commands: Commands) {
     commands.remove_resource::<PlayerLifes>();
 }
 
-fn game_over(
-    mut state: ResMut<State<AppState>>,
-    lifes: Res<PlayerLifes>,
-    score: Res<Score>,
-    _: ResMut<Events<AppExit>>,
-) {
-    dbg!(lifes.0);
+fn game_over(mut state: ResMut<State<AppState>>, lifes: Res<PlayerLifes>) {
     if lifes.0 == 0 {
-        dbg!(*score);
-        //signal.send(AppExit);
         state.pop().unwrap();
     }
 }

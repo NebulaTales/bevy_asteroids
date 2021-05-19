@@ -86,6 +86,45 @@ fn enter(mut commands: Commands, font: Res<GameFont>) {
         .insert(ScoreCounter::default());
 }
 
+fn add_score_title(mut commands: Commands, score: Res<Score>, font: Res<GameFont>) {
+    commands
+        .spawn_bundle(TextBundle {
+            style: Style {
+                align_self: AlignSelf::Center,
+                position_type: PositionType::Absolute,
+                position: Rect {
+                    left: Val::Px(50.),
+                    bottom: Val::Percent(50.),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            text: Text {
+                sections: vec![
+                    TextSection {
+                        value: format!("Score: {}\n", score.current),
+                        style: TextStyle {
+                            font: font.0.clone(),
+                            font_size: 120.,
+                            color: Color::ORANGE_RED,
+                        },
+                    },
+                    TextSection {
+                        value: format!("Highest: {}\n", score.highest),
+                        style: TextStyle {
+                            font: font.0.clone(),
+                            font_size: 42.,
+                            color: Color::BLUE,
+                        },
+                    },
+                ],
+                alignment: Default::default(),
+            },
+            ..Default::default()
+        })
+        .insert(Title);
+}
+
 fn add_title(mut commands: Commands, font: Res<GameFont>) {
     commands
         .spawn_bundle(TextBundle {
@@ -94,7 +133,7 @@ fn add_title(mut commands: Commands, font: Res<GameFont>) {
                 position_type: PositionType::Absolute,
                 position: Rect {
                     left: Val::Percent(50.),
-                    bottom: Val::Percent(50.),
+                    bottom: Val::Percent(25.),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -139,7 +178,11 @@ impl Plugin for TitlePlugin {
                     .with_system(enter.system()),
             )
             .add_system_set(SystemSet::on_update(AppState::Title).with_system(launch_game.system()))
-            .add_system_set(SystemSet::on_resume(AppState::Title).with_system(add_title.system()))
+            .add_system_set(
+                SystemSet::on_resume(AppState::Title)
+                    .with_system(add_score_title.system())
+                    .with_system(add_title.system()),
+            )
             .add_system_set(
                 SystemSet::on_pause(AppState::Title)
                     .with_system(display_score_counter.system())
