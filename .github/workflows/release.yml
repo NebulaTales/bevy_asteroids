@@ -9,8 +9,88 @@ on:
 
 env:
   GAME_EXECUTABLE_NAME: asteroids
+  GAME_OSX_APP_NAME: Asteroids
 
 jobs:
+  build-linux:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install Dependencies
+        run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+      - name: Build release
+        run: |
+          cargo build --release --features native
+      - name: Prepare release
+        run: |
+          strip target/release/${{ env.GAME_EXECUTABLE_NAME }}
+          chmod +x target/release/${{ env.GAME_EXECUTABLE_NAME }}
+          mv target/release/${{ env.GAME_EXECUTABLE_NAME }} .
+      - name: Bundle release
+        run: |
+          tar -czf ${{ env.GAME_EXECUTABLE_NAME }}_linux.tar.gz ${{ env.GAME_EXECUTABLE_NAME }} assets
+      - name: Upload release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.GAME_EXECUTABLE_NAME }}_linux.tar.gz
+          asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ steps.tag.outputs.tag }}_linux.tar.gz
+          tag: ${{ github.ref }}
+          overwrite: true
+          
+
+  build-macOS:
+    runs-on: macOS-latest
+
+    steps:
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Remove build script
+        run: |
+          rm build.rs
+      - name: Build release
+        run: |
+          cargo build --release --features native
+      - name: Create release
+        run: |
+          mkdir -p build/macos/src/Game.app/Contents/MacOS/assets
+          cp -r assets/ build/macos/src/Game.app/Contents/MacOS/assets
+          cp target/release/${{ env.GAME_EXECUTABLE_NAME }} build/macos/src/Game.app/Contents/MacOS/
+          strip build/macos/src/Game.app/Contents/MacOS/${{ env.GAME_EXECUTABLE_NAME }}
+          mv build/macos/src/Game.app build/macos/src/${{ env.GAME_OSX_APP_NAME }}.app
+          hdiutil create -fs HFS+ -volname "${{ env.GAME_OSX_APP_NAME }}" -srcfolder build/macos/src ${{ env.GAME_EXECUTABLE_NAME }}.dmg
+      - name: Upload release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.GAME_EXECUTABLE_NAME }}.dmg
+          asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ steps.tag.outputs.tag }}_macOS.dmg
+          tag: ${{ github.ref }}
+          overwrite: true
+
+
   build-windows-latest:
     runs-on: windows-latest
 
@@ -20,6 +100,8 @@ jobs:
         uses: dawidd6/action-get-tag@v1
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          lfs: true
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
