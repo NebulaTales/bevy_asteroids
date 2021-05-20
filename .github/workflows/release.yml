@@ -32,7 +32,7 @@ jobs:
         run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
       - name: Build release
         run: |
-          cargo build --release --features native
+          cargo build --release
       - name: Prepare release
         run: |
           strip target/release/${{ env.GAME_EXECUTABLE_NAME }}
@@ -72,7 +72,7 @@ jobs:
           rm build.rs
       - name: Build release
         run: |
-          cargo build --release --features native
+          cargo build --release
       - name: Create release
         run: |
           mkdir -p build/macos/src/Game.app/Contents/MacOS/assets
