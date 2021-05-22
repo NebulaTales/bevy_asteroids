@@ -1,6 +1,8 @@
 use bevy::{
     app::{AppBuilder, Plugin, PluginGroup, PluginGroupBuilder},
-    ecs::system::{Commands, IntoSystem},
+    asset::AssetServer,
+    audio::Audio,
+    ecs::system::{Commands, IntoSystem, Res},
     math::Vec2,
     render::entity::OrthographicCameraBundle,
     ui::entity::UiCameraBundle,
@@ -58,11 +60,13 @@ enum AppState {
 //////////////////////////////////////////////////////////////////////////////
 struct BasePlugin;
 
-pub fn game(mut commands: Commands) {
+pub fn game(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audio>) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(WrapCamera);
     commands.spawn_bundle(UiCameraBundle::default());
+    let music = asset_server.load("audio/background.mp3");
+    audio.play(music);
 }
 
 impl Plugin for BasePlugin {
