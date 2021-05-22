@@ -2,6 +2,7 @@
 name = "asteroid"
 version = "0.2.3"
 authors = ["Oragon Efreet <kevin.dorange@protonmail.com>"]
+license = "MIT"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
