@@ -1,14 +1,13 @@
 use bevy::{
     app::{AppBuilder, Plugin, PluginGroup, PluginGroupBuilder},
-    asset::AssetServer,
-    ecs::system::{Commands, IntoSystem, Res},
+    ecs::system::{Commands, IntoSystem},
     math::Vec2,
     render::entity::OrthographicCameraBundle,
     ui::entity::UiCameraBundle,
 };
-use bevy_kira_audio::Audio;
 
 mod asteroids;
+mod audio;
 mod collision;
 mod controls;
 mod fire;
@@ -21,6 +20,7 @@ mod ui;
 mod wrap;
 
 pub use asteroids::AsteroidsPlugin;
+pub use audio::AudioPlugin;
 pub use collision::{Collider2D, CollisionEvent, CollisionLayer, CollisionMask, CollisionPlugin};
 pub use controls::{ControlLocked, ControlsPlugin, PlayerControlled};
 pub use fire::{Fire, FirePlugin, Firing};
@@ -60,14 +60,11 @@ enum AppState {
 //////////////////////////////////////////////////////////////////////////////
 struct BasePlugin;
 
-pub fn game(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audio>) {
+pub fn game(mut commands: Commands) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(WrapCamera);
     commands.spawn_bundle(UiCameraBundle::default());
-
-    //audio.play_looped(asset_server.load("audio/background.mp3"));
-    audio.play_looped(asset_server.load("audio/background.mp3"));
 }
 
 impl Plugin for BasePlugin {
@@ -80,6 +77,7 @@ impl Plugin for BasePlugin {
 impl PluginGroup for AsteroidsGamePlugins {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
         group.add(AsteroidsPlugin);
+        group.add(AudioPlugin);
         group.add(BasePlugin);
         group.add(CollisionPlugin);
         group.add(ControlsPlugin);
@@ -88,8 +86,8 @@ impl PluginGroup for AsteroidsGamePlugins {
         group.add(PlayerPlugin);
         group.add(RulesPlugin);
         group.add(ScorePlugin);
+        group.add(TitlePlugin);
         group.add(UIPlugin);
         group.add(WrapPlugin);
-        group.add(TitlePlugin);
     }
 }
