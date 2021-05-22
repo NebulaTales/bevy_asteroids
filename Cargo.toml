@@ -4,18 +4,24 @@ version = "0.2.3"
 authors = ["Oragon Efreet <kevin.dorange@protonmail.com>"]
 license = "MIT"
 edition = "2018"
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = [ 
+  #"bevy/bevy_wgpu",
+  #"bevy/bevy_winit",
+  #"bevy/png",
+  #"bevy/render",
+  #"bevy/x11",
+  "bevy_kira_audio/mp3",
+  "bevy_kira_audio/ogg"
+]
 
 [dependencies]
-#bevy = "0.4"
+bevy = { version="0.5.0"}
+bevy_kira_audio = "0.5.0"
 rand = "0.8.0"
-
-[dependencies.bevy]
-git = "https://github.com/bevyengine/bevy"
-branch = "main"
-
-
 
 

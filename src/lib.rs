@@ -1,12 +1,12 @@
 use bevy::{
     app::{AppBuilder, Plugin, PluginGroup, PluginGroupBuilder},
     asset::AssetServer,
-    audio::Audio,
     ecs::system::{Commands, IntoSystem, Res},
     math::Vec2,
     render::entity::OrthographicCameraBundle,
     ui::entity::UiCameraBundle,
 };
+use bevy_kira_audio::Audio;
 
 mod asteroids;
 mod collision;
@@ -65,8 +65,9 @@ pub fn game(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<A
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(WrapCamera);
     commands.spawn_bundle(UiCameraBundle::default());
-    let music = asset_server.load("audio/background.mp3");
-    audio.play(music);
+
+    //audio.play_looped(asset_server.load("audio/background.mp3"));
+    audio.play_looped(asset_server.load("audio/background.mp3"));
 }
 
 impl Plugin for BasePlugin {
