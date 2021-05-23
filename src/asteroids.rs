@@ -1,7 +1,7 @@
 use crate::{
-    AppState, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Fire, NoWrapProtection,
-    Score, Shape2D, Velocity, Wrap, WrapCamera, AMMO, OBSTACLE, PLAYER, SCORE_BIG_ASTEROID,
-    SCORE_SAUCER, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
+    AppState, AudioChannels, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Fire,
+    NoWrapProtection, Score, Shape2D, SoundEffects, Velocity, Wrap, WrapCamera, AMMO, OBSTACLE,
+    PLAYER, SCORE_BIG_ASTEROID, SCORE_SAUCER, SCORE_SMALL_ASTEROID, SCORE_TINY_ASTEROID,
 };
 use rand::prelude::*;
 use std::{collections::HashSet, time::Duration};
@@ -25,6 +25,7 @@ use bevy::{
     },
     transform::components::Transform,
 };
+use bevy_kira_audio::Audio;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(u16)]
@@ -62,6 +63,9 @@ fn spawn(
     mut commands: Commands,
     texture_atlas: Res<SpawnTexture>,
     q_spawn: Query<(Entity, &Spawn)>,
+    audio: Res<Audio>,
+    fx: Res<SoundEffects>,
+    audio_channels: Res<AudioChannels>,
 ) {
     for (entity, spawn) in q_spawn.iter() {
         let mut rng = thread_rng();
@@ -102,6 +106,7 @@ fn spawn(
         }
         if spawn.asteroid == Asteroid::Saucer {
             e.insert(NoWrapProtection);
+            audio.play_looped_in_channel(fx.ufo.clone(), &audio_channels.fx_ufo);
         }
     }
 }
@@ -222,6 +227,9 @@ fn destroy_on_collision(
     saucer_particle_colors: Res<SaucerParticleColors>,
     q_asteroids: Query<(Entity, &Asteroid, &Transform, Option<&Velocity>)>,
     q_collides_with: Query<(&Transform, Option<&Velocity>)>,
+    audio: Res<Audio>,
+    fx: Res<SoundEffects>,
+    audio_channels: Res<AudioChannels>,
 ) {
     // Ensuires each collision is treated once
     let mut already_done = HashSet::new();
@@ -242,6 +250,11 @@ fn destroy_on_collision(
             } else {
                 Default::default()
             };
+
+            if matches!(asteroid, Asteroid::Saucer) {
+                audio.stop_channel(&audio_channels.fx_ufo);
+            }
+            audio.play_in_channel(fx.boom.clone(), &audio_channels.fx);
 
             if let Some(asteroid) = match asteroid {
                 Asteroid::Big => Some(Asteroid::Small),
