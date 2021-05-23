@@ -1,6 +1,6 @@
 use crate::{
-    AppState, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Shape2D, Velocity, Wrap,
-    AMMO, OBSTACLE,
+    AppState, AudioChannels, Collider2D, CollisionEvent, CollisionLayer, CollisionMask, Shape2D,
+    SoundEffects, Velocity, Wrap, AMMO, OBSTACLE,
 };
 use bevy::{
     app::{AppBuilder, EventReader, Plugin},
@@ -18,6 +18,7 @@ use bevy::{
     sprite::{entity::SpriteBundle, ColorMaterial},
     transform::components::Transform,
 };
+use bevy_kira_audio::Audio;
 use rand::prelude::*;
 use std::time::Duration;
 
@@ -61,6 +62,9 @@ pub fn spawn_fires(
     mut commands: Commands,
     time: Res<Time>,
     colors: Res<FireColors>,
+    audio: Res<Audio>,
+    fx: Res<SoundEffects>,
+    audio_channels: Res<AudioChannels>,
     mut query: Query<
         (
             Entity,
@@ -87,6 +91,8 @@ pub fn spawn_fires(
         };
 
         if fire {
+            audio.play_in_channel(fx.fire.clone(), &audio_channels.fx);
+
             // Calculate initial velocity by computing vector*INITIAL_SPEED
             let rotation = transform.rotation.to_axis_angle();
             let mut angle = std::f32::consts::PI / 2.0 + rotation.0.z * rotation.1;

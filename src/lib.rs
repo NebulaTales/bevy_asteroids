@@ -20,7 +20,7 @@ mod ui;
 mod wrap;
 
 pub use asteroids::AsteroidsPlugin;
-pub use audio::AudioPlugin;
+pub use audio::{AudioChannels, AudioPlugin, SoundEffects};
 pub use collision::{Collider2D, CollisionEvent, CollisionLayer, CollisionMask, CollisionPlugin};
 pub use controls::{ControlLocked, ControlsPlugin, PlayerControlled};
 pub use fire::{Fire, FirePlugin, Firing};
