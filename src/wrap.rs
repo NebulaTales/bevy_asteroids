@@ -1,4 +1,4 @@
-use crate::{AppState, CollisionLayer, CollisionMask};
+use crate::{AppState, AsteroidClass, AudioChannels, CollisionLayer, CollisionMask};
 use bevy::{
     app::{AppBuilder, Plugin},
     asset::{Assets, Handle},
@@ -17,6 +17,7 @@ use bevy::{
     },
     transform::components::Transform,
 };
+use bevy_kira_audio::Audio;
 use std::time::Duration;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
@@ -94,7 +95,7 @@ impl Ghost {
     }
 }
 
-pub struct Area {
+struct Area {
     pub left: f32,
     pub right: f32,
     pub top: f32,
@@ -387,6 +388,54 @@ fn despawn_ghosts_direct_sprite_atlas(
     }
 }
 
+/// Remove the NoWrapProtection from any entity going into the screen
+fn remove_nowrap_protection_sprite(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    mut query: Query<(Entity, &Sprite, &mut Transform), With<NoWrapProtection>>,
+) {
+    if let Ok(projection) = q_projection.single() {
+        let screen_rect = Area::from_projection(projection);
+        for (entity, sprite, transform) in query.iter_mut() {
+            if Area::new(transform.translation.truncate(), sprite.size).inside(&screen_rect) {
+                commands.entity(entity).remove::<NoWrapProtection>();
+            }
+        }
+    }
+}
+
+fn remove_nowrap_protection_sprite_atlas(
+    mut commands: Commands,
+    q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut query: Query<
+        (
+            Entity,
+            &Handle<TextureAtlas>,
+            &mut Transform,
+            &TextureAtlasSprite,
+        ),
+        With<NoWrapProtection>,
+    >,
+) {
+    if let Ok(projection) = q_projection.single() {
+        let screen_rect = Area::from_projection(projection);
+        for (entity, texture_atlas, transform, sprite) in query.iter_mut() {
+            if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
+                if Area::from_position_atlas(
+                    transform.translation.truncate(),
+                    texture_atlas,
+                    sprite.index as usize,
+                )
+                .inside(&screen_rect)
+                {
+                    commands.entity(entity).remove::<NoWrapProtection>();
+                }
+            }
+        }
+    }
+}
+
 /// Despawner for any main entity (None of `Ghost`, `Wrap` or `Wrapped`
 /// When the sprite goes out of screen.
 /// To see how an entity can lost its `Wrapped` tag, see `despawn_ghost`direct`
@@ -420,12 +469,15 @@ fn despawn_unwrapped_sprite_atlas(
     mut commands: Commands,
     q_projection: Query<&OrthographicProjection, With<WrapCamera>>,
     texture_atlases: Res<Assets<TextureAtlas>>,
+    audio: Res<Audio>,
+    audio_channels: Res<AudioChannels>,
     mut query: Query<
         (
             Entity,
             &Handle<TextureAtlas>,
             &mut Transform,
             &TextureAtlasSprite,
+            Option<&AsteroidClass>,
         ),
         (
             Without<Wrap>,
@@ -437,7 +489,7 @@ fn despawn_unwrapped_sprite_atlas(
 ) {
     if let Ok(projection) = q_projection.single() {
         let screen_rect = Area::from_projection(projection);
-        for (entity, texture_atlas, transform, sprite) in query.iter_mut() {
+        for (entity, texture_atlas, transform, sprite, asteroid) in query.iter_mut() {
             if let Some(texture_atlas) = texture_atlases.get(texture_atlas) {
                 if Area::from_position_atlas(
                     transform.translation.truncate(),
@@ -446,6 +498,9 @@ fn despawn_unwrapped_sprite_atlas(
                 )
                 .outside(&screen_rect)
                 {
+                    if matches!(asteroid, Some(AsteroidClass::Saucer)) {
+                        audio.stop_channel(&audio_channels.fx_ufo);
+                    }
                     commands.entity(entity).despawn();
                 }
             }
@@ -721,6 +776,8 @@ impl Plugin for WrapPlugin {
             .add_system(despawn_ghosts_direct_sprite.system())
             .add_system(despawn_ghosts_direct_sprite_atlas.system())
             .add_system(auto_unwrap.system())
+            .add_system(remove_nowrap_protection_sprite.system())
+            .add_system(remove_nowrap_protection_sprite_atlas.system())
             .add_system(despawn_unwrapped_sprite.system())
             .add_system(despawn_unwrapped_sprite_atlas.system())
             .add_system_set(

@@ -29,7 +29,7 @@ use bevy_kira_audio::Audio;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(u16)]
-enum Asteroid {
+pub enum Asteroid {
     Big = SCORE_BIG_ASTEROID,
     Small = SCORE_SMALL_ASTEROID,
     Tiny = SCORE_TINY_ASTEROID,

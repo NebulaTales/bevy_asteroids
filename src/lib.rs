@@ -19,7 +19,7 @@ mod title;
 mod ui;
 mod wrap;
 
-pub use asteroids::AsteroidsPlugin;
+pub use asteroids::{Asteroid as AsteroidClass, AsteroidsPlugin};
 pub use audio::{AudioChannels, AudioPlugin, SoundEffects};
 pub use collision::{Collider2D, CollisionEvent, CollisionLayer, CollisionMask, CollisionPlugin};
 pub use controls::{ControlLocked, ControlsPlugin, PlayerControlled};
