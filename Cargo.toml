@@ -1,6 +1,6 @@
 [package]
 name = "asteroid"
-version = "0.2.3"
+version = "0.3.0"
 authors = ["Oragon Efreet <kevin.dorange@protonmail.com>"]
 license = "MIT"
 edition = "2018"
